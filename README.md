@@ -11,6 +11,8 @@ Tools provided in this repository are:
  - generateStart2CalRunPar.C [macro analyzing time walk histograms and the run-by-run parameter file]
  - getTimingMatrix.C [macro analyzing calibration status run-by-run (in reality: batch job by job, timing granularity depends on nFilesPerJob)]
 ## Filling histos
-The philosophy of the code is to _ALWAYS_ fill _ALL_ histos necessary for _ALL_ calibration activities. This is slightly wasteful, as memory and operating time is somehow wasted. The benefit however is a significant reduction of the number of batchfarm jobs that must be sent. Keep in mind that this is the final status of the analysis after the feb24 run. All histograms that were in anyway useful were added to the task. This way, any reasonable request from the calibration team should be already included in the analysis. 
+The philosophy of the code is to _ALWAYS_ fill _ALL_ histos necessary for _ALL_ calibration activities. This is slightly wasteful, as more memory and operating time is used, that would necessary when using individual, specialized code. The benefit, however, is a significant reduction of the number of batchfarm jobs that must be sent. Keep in mind that this is the final status of the analysis after the feb24 run. All histograms that were in anyway useful were added to the task. This way, any reasonable request from the calibration team should be already included in the analysis. 
 
-In general I recommend only using the `FillRpcAndStartHistosWithTracking` task. The tracking, of course, takes a lot of time. But, once again, the entire analysis is cleaner and lighter on the batchfarm if only this task is sent. Including tracking only increases the capabilities of the code, there is no loss involved. 
+In general I recommend only using the `FillRpcAndStartHistosWithTracking` task. The tracking, of course, takes a lot of time. But, once again, the entire analysis is cleaner if only this task is sent. Including tracking only increases the capabilities of the code, there is no loss involved (except for the loss of time, of course). This way, every calibration analysis you send will have the same structure.
+
+

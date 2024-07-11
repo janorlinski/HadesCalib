@@ -274,6 +274,8 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 		TH1F* fitSigmaOneFile;
 		TH1F* fitMuOneFile;
 		
+		TH1I* evtCounter; 
+		
 		// other containers
 		//vector <  Double_t > vSigma;
 		//vector <  Double_t > vMu;
@@ -343,6 +345,10 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			hNegativeTracksOneFile = new TH1F("hNegativeTracksOneFile", "negative tracks vs start strip", 80, -0.5, 79.5);
 			hPionsOneFile = new TH1F("hPionsOneFile", "pions vs start strip", 80, -0.5, 79.5);
+			
+			evtCounter = new TH1F("evtCounter", "event counter", 2, 0-0.5, 2-0.5);
+			evtCounter->SetBinLabel(1, "all events");
+			evtCounter->SetBinLabel(2, "3 fastest");
 		
 			for (Int_t i=0; i<6; i++) { // loop over sectors
 			   
@@ -442,6 +448,11 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	        
 	        // end of from qamaker
 	        
+	        //event counter(s)
+	        
+	        evtCounter->Fill(0); // add every event to the first event
+	        if (GetMinTofCand() >= 3) evtCounter->Fill(1); // cut on at least 3 fastest particles in tof
+	        
 	        //extra stuff for start guys
 	        
 	        while (NULL != (Start2CalObject = static_cast<HStart2Cal*>(iterStart2Cal->Next()))) {
@@ -466,6 +477,8 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			}
 			
 			iterStart2Cal->Reset(); // return to 0 for the next loop
+			
+			
             
             while (NULL != (cand = static_cast<HParticleCand*>(iterParticleCand->Next()))) { //ParticleCandIter
 				

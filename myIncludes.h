@@ -399,5 +399,61 @@ void fillTimeOffsets (TH1F* hOffsets, TH2F* hSource, Int_t firstBinToFill, Int_t
 	}
 }
 
+Float_t GetMinTofCand() {
+	
+	// from Gosia
+	
+    HCategory* hcParticleCand = HCategoryManager::getCategory(catParticleCand);
+
+    if (!hcParticleCand) {
+    cerr << "Could not read the required category ParticleCand" << endl;
+    return -10000.;
+    }
+
+    //---------------------------------------------------------------------------------
+    map<Int_t, Float_t> tMaps[2];
+
+    //---------------------------------------------------------------------------------
+    for (Int_t p = 0; p < hcParticleCand->getEntries(); p++) {
+    HParticleCand* hpc = (HParticleCand*) hcParticleCand->getObject(p);
+
+    if (hpc->getSystemUsed() < 0 || hpc->getSystemUsed() > 1)
+        continue;
+
+    Int_t i = hpc->getSystemUsed() ? hpc->getTofHitInd() : hpc->getRpcInd();
+    Float_t d = hpc->getDistanceToMetaHit(), t = hpc->getTof();
+
+    if (t < 0. || t > 300. || d > 3000.)
+        continue;
+
+    t *= 2100. / d;
+
+    if (tMaps[hpc->getSystemUsed()].count(i) == 0 || (tMaps[hpc->getSystemUsed()].count(i) == 1 && tMaps[hpc->getSystemUsed()][i] > t))
+        tMaps[hpc->getSystemUsed()][i] = t;
+    }
+
+    //---------------------------------------------------------------------------------
+    vector<Float_t> tList;
+
+    //---------------------------------------------------------------------------------
+    for (Int_t i = 0; i < 2; i++)
+    for (auto it = tMaps[i].begin(); it != tMaps[i].end(); it++)
+        tList.push_back(it->second);
+
+    //---------------------------------------------------------------------------------
+    if (tList.size() == 0)
+    return -10000.;
+
+    std::sort(tList.begin(), tList.end());
+
+    //---------------------------------------------------------------------------------
+    Float_t sum = 0.;
+    for (Int_t i = 0; i < TMath::Min(3, (Int_t) tList.size()); i++)
+    sum += tList[i];
+
+    //---------------------------------------------------------------------------------
+    return (sum / TMath::Min(3, (Int_t) tList.size()));
+}
+
 
 #endif

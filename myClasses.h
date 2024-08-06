@@ -31,6 +31,9 @@ const Int_t nHistForTimeWalk = 2;
 
 const Float_t tDiffEntriesThreshold = 10000;
 
+const Float_t loTimeLimitForMultiplicity = -5.0; // ns
+const Float_t hiTimeLimitForMultiplicity = 5.0; // ns
+
 const Int_t nPointsForTimeWalk = 17;
 const Float_t widthLoLimitTW = 2.0;
 const Float_t widthHiLimitTW = 19.0;
@@ -252,33 +255,52 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	    const Double_t betaCut = 0.92;
 	   
 	    // histogram declarations
+	    
+	    // HADES stuff declarations
+	    
+	    // general
 	    TH2F* hBetaMomentum;
 	    TH2F* hBetaMomentumSys0;
 	    TH2F* hBetaMomentumSys1;
+	    
+	    // for start calibration	    
+	    TH2F* hMultiplicityPerModule;
+	    TH2F* hMultiplicityPerModuleNoTimeLimit;
 		TH2F* hToTVsStartStrip;
 		TH2F* hAbsTimeVsStartStrip;
+	    TH2F* hTimeDiffVsChannel[nChannels];
+	    TH2F* hTimeDiffVsWidth[nChannels];
+	    TH2F* hTimeDiffVsWidthBigTimeRange[nChannels];
+	    TH1F* hTimeDiffForTimeWalk[nChannels][nPointsForTimeWalk];
+	    TH1F* hWidthForTimeWalk[nChannels][nPointsForTimeWalk];
+		TH2F* hRpcTimeDifferenceVsStartStrip;
+		TH2F* hRpcTimeDifferenceVsStartStripBigRange;
 		
-		TH2F* hTimeDifferenceVsStartStrip;
-		TH2F* hTimeDifferenceVsStartStripBigRange;
-		
+		// for rpc time/pos calibration
 		TH2F* hXposDifference[6];
 		TH2F* hTimeDifference[6];
 		TH2F* hTimeDifferenceBigRange[6];
 		TH1F* hXposOffsets[6];
 		TH1F* hTimeOffsets[6];
 		
+		// tot/abstime positions specifically for timingMatrix analysis
 		TH1F* maxWidthPosOneFile;
 		TH1F* maxAbsTimePosOneFile;
-		TH1F* hNegativeTracksOneFile;
-		TH1F* hPionsOneFile;
+		
+		// beam profile/pid quality checks specifically for timingMatrix analysis
+		TH1F* hNegativeTracksOneFile[7];
+		TH1F* hPionsBetaCutOneFile[7];
+		TH1F* hPionsBananaCutOneFile[7];
+		TH1F* hPionsBananaCutAllStripsOneFile;
+		
+		// timing checks specifically for timingMatrix analysis
 		TH1F* fitSigmaOneFile;
 		TH1F* fitMuOneFile;
+		TH1F* minimumTimeOneFile;
 		
+		// evt counting for normalisations and trigger checks
 		TH1I* evtCounter; 
 		
-		// other containers
-		//vector <  Double_t > vSigma;
-		//vector <  Double_t > vMu;
 		TString hldFileName;
 		
 	    // HADES stuff declarations
@@ -292,9 +314,14 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	    // objects
 		HParticleCand* cand;
 	    HStart2Cal* Start2CalObject;
+	    HStart2Cal* Start2CalObjectRef;
 	    HStart2Hit* Start2HitObject;
 		//HRpcHit* rpchit;
 		//HRpcCluster* rpcclus;
+		
+		// pion graphical cuts
+		TCutG* cutPositive;
+		TCutG* cutNegative;
 
 	public:
 	
@@ -327,6 +354,12 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 		Start2CalCategory = HCategoryManager::getCategory(catStart2Cal);
 		Start2HitCategory = HCategoryManager::getCategory(catStart2Hit);
 		
+		// get beta momentum banana cuts for pions - if needed
+		
+		TFile* fCuts = new TFile("cuts.root", "READ");
+		cutPositive = (TCutG*) fCuts->Get("CUTG;1");
+		cutNegative = (TCutG*) fCuts->Get("CUTG;2");
+		
 		if(out) {
 				
 		   out->cd();
@@ -343,14 +376,29 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			hTimeDifferenceVsStartStrip = new TH2F("hTimeDifferenceVsStartStrip", "tdiff rpc vs. start ch", 80, 0.5, 80.5, 800, -20, 20);
 			hTimeDifferenceVsStartStripBigRange = new TH2F("hTimeDifferenceVsStartStripAllTracks", "tdiff rpc big range vs. start ch", 80, 0.5, 80.5, 1000, -50, 50);
 			
-			hNegativeTracksOneFile = new TH1F("hNegativeTracksOneFile", "negative tracks vs start strip", 80, -0.5, 79.5);
-			hPionsOneFile = new TH1F("hPionsOneFile", "pions vs start strip", 80, -0.5, 79.5);
+			hNegativeTracksOneFile[6] = new TH1F("hNegativeTracksOneFile", "negative tracks vs start strip, all sectors", 80, -0.5, 79.5);
+			hPionsBetaCutOneFile[6] = new TH1F("hPionsBetaCutOneFile", "pions from beta cuts vs start strip, all sectors", 80, -0.5, 79.5);
+			hPionsBananaCutOneFile[6] = new TH1F("hPionsBananaCutOneFile", "pions from banana cut vs start strip, all sectors", 80, -0.5, 79.5);
+			hPionsBananaCutAllStripsOneFile = new TH1F("hPionsBananaCutAllStripsOneFile", "pions from banana cut vs. sectors", 6, 0.5, 6.5);
+			minimumTimeOneFile = new TH1F("minimumTimeOneFile", "minimum META time", 400, 0.0, 20.0);
 			
-			evtCounter = new TH1F("evtCounter", "event counter", 2, 0-0.5, 2-0.5);
-			evtCounter->SetBinLabel(1, "all events");
-			evtCounter->SetBinLabel(2, "3 fastest");
+			evtCounter = new TH1I("evtCounter", "event counter", 2, 0-0.5, 2-0.5);
+			evtCounter->GetXaxis()->SetBinLabel(1, "all events");
+			evtCounter->GetXaxis()->SetBinLabel(2, "3 fastest");
 		
 			for (Int_t i=0; i<6; i++) { // loop over sectors
+			   
+				hNegativeTracksOneFile[i] = new TH1F(
+				Form("hNegativeTracksOneFile_sect%i", i+1), Form("negative tracks vs start strip, sector %i", i+1), 
+				80, -0.5, 79.5);
+				
+				hPionsBetaCutOneFile[i] = new TH1F(
+				Form("hPionsBetaCutOneFile_sect%i", i+1), Form("pions from beta cuts vs start strip, sector %i", i+1), 
+				80, -0.5, 79.5);
+				
+				hPionsBananaCutOneFile[i] = new TH1F(
+				Form("hPionsBananaCutOneFile_sect%i", i+1), Form("pions from banana cut vs start strip, sector %i", i+1),
+				80, -0.5, 79.5);
 			   
 				hXposDifference[i] = new TH2F(
 				Form("hXposDifference_sect%i",i+1),
@@ -453,6 +501,13 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	        evtCounter->Fill(0); // add every event to the first event
 	        if (GetMinTofCand() >= 3) evtCounter->Fill(1); // cut on at least 3 fastest particles in tof
 	        
+	        // find minimum time suggested by Willy
+	        
+	        minimumTimeOneFile->Fill(findMinimumTime(3));
+	        
+	        //HParticleStart2HitF *dummy = new HParticleStart2HitF();
+	        //Float_t minTime = dummy->findMinimumTime(3);
+	        
 	        //extra stuff for start guys
 	        
 	        while (NULL != (Start2CalObject = static_cast<HStart2Cal*>(iterStart2Cal->Next()))) {
@@ -487,13 +542,20 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 					Float_t beta = cand->getBeta();
 					Float_t mom = cand->getMomentum();
 					Float_t chrg = cand->getCharge();
+					Int_t sector = cand -> getSector();
 					
 					hBetaMomentum->Fill(mom*chrg, beta);
-
 					if (cand->getSystemUsed()==0) hBetaMomentumSys0->Fill(mom*chrg, beta);
 					else if (cand->getSystemUsed()==1) hBetaMomentumSys1->Fill(mom*chrg, beta);
 										
-					if (imposeBetaCut && cand->getBeta() < betaCut) continue;
+					// GENERAL STUFF				
+					
+					//if (cutPositive->IsInside(mom*chrg, beta) || 
+					//cutNegative->IsInside(mom*chrg, beta)) hPionsBananaCutAllStripsOneFile->Fill(sector+1);	
+										
+					// RPC CALIBRATION STUFF
+										
+					//if (imposeBetaCut && cand->getBeta() < betaCut) continue;
 					
 					Float_t MASS = 0;            
 		            if (cand->getCharge()==-1) MASS = 139.57;
@@ -502,59 +564,60 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	            
 // 					Xpos calibration
 			  
+			  
 				    if (cand->getSystemUsed()==0){ 			
-
-						Float_t xdiff = cand->getRkMetaDx();
 						
-						Int_t indexRPCHit = cand->getRpcInd();
-						Int_t metaCell = cand->getMetaCell(indexRPCHit);
-						Int_t metaModule = cand->getMetaModule(indexRPCHit);
-						Int_t sector = cand -> getSector();
+						//Int_t indexRPCHit = cand->getRpcInd();
+						//Int_t indexMetaHit = cand->getMetaInd();
+						Int_t metaCell = cand->getMetaCell(0);
+						Int_t metaModule = cand->getMetaModule(0);
 			            Int_t index = 32*metaModule + metaCell;
 			            
+			            
+						Float_t xdiff = cand->getRkMetaDx();
 						hXposDifference[sector]->Fill(index, xdiff);
 					
-				    }
-				    
-// 					T diff
-							
-					//Float_t beta_test = (cand->getMomentum())/TMath::Sqrt((cand->getMomentum())*(cand->getMomentum())+(cand->getMass2()) );
-				    Float_t MIN_MOM = 50; 
-	
-					Float_t Tof;
-	                Float_t beta_c = (cand->getMomentum())/TMath::Sqrt((cand->getMomentum())*(cand->getMomentum())+MASS*MASS);
-	                Float_t tof_c;
-	                Float_t time_diff;
-	                
-				    if (cand->getSystemUsed() ==0 && cand->getRpcInd() > -1) {	
+					    Float_t MIN_MOM = 50; 
+		
+						Float_t Tof;
+		                Float_t beta_c = (mom)/TMath::Sqrt(mom*mom+MASS*MASS);
+		                Float_t tof_c;
+		                Float_t time_diff;
 						
-						if (cand->getMomentum() > MIN_MOM) {   
+						if (mom > MIN_MOM) {   
 							
 							Tof = cand->getTof();
-							tof_c  = cand->getBeta() / beta_c;
+							tof_c  = beta / beta_c;
 							time_diff =  Tof * (1.0 - tof_c);
-							
-							Int_t indexRPCHit = cand->getRpcInd();
-							Int_t metaCell = cand->getMetaCell(indexRPCHit);
-							Int_t metaModule = cand->getMetaModule(indexRPCHit);
-							Int_t sector = cand -> getSector();
-				            Int_t index = 32*metaModule + metaCell;
 			            
 							if (abs(time_diff)<5) hTimeDifference[sector]->Fill(index, time_diff);
-							hTimeDifferenceBigRange[sector]->Fill(index, time_diff);		
+							hTimeDifferenceBigRange[sector]->Fill(index, time_diff);
+							
+							//cout << "track w/mom = " << mom << ", s" << sector << "m" << metaModule << "c" << metaCell << ", xdiff = " << xdiff << ", tdiff = " << time_diff << ". \n";	
+							//cout << "track w/mom = " << mom << ", RPCind=" << indexRPCHit << ", METAind=" << indexMetaHit << ", index=" << index <<
+							//"(s" << sector << "m" << metaModule << "c" << metaCell <<"), xdiff = " << xdiff << ", tdiff = " << time_diff << ". \n";	
 							
 							// THIS SECTION IS FOR RPC TDIFF vs. START STRIPE 
 							
 				            while (NULL != (Start2CalObject = static_cast<HStart2Cal*>(iterStart2Cal->Next()))) { // get all the start2cal objects
 							
-								if (cand->getCharge() < 0) { //select negative tracks
+								Int_t nOfStartHits = Start2CalObject->getMultiplicity();
+								Int_t startIndex = Start2CalObject->getModule() * 20 + Start2CalObject->getStrip();
 							
-									Int_t nOfStartHits = Start2CalObject->getMultiplicity();
-									Int_t startIndex = Start2CalObject->getModule() * 20 + Start2CalObject->getStrip();
+								if (cand->getCharge() < 0) { //select negative tracks
 								
-									hNegativeTracksOneFile->Fill(startIndex, nOfStartHits);
+									hNegativeTracksOneFile[sector]->Fill(startIndex, nOfStartHits);
+									hNegativeTracksOneFile[6]->Fill(startIndex, nOfStartHits);
 									
-									if (cand->getBeta() >= betaCut && cand->getBeta() < 1.4) hPionsOneFile->Fill(startIndex, nOfStartHits);
+									if (cand->getBeta() >= betaCut && cand->getBeta() < 1.4) {
+										 hPionsBetaCutOneFile[sector]->Fill(startIndex, nOfStartHits);
+										 hPionsBetaCutOneFile[6]->Fill(startIndex, nOfStartHits);
+									}
+									
+									if (cutNegative->IsInside(cand->getMomentum()*(-1.0), cand->getBeta())) {
+										hPionsBananaCutOneFile[sector]->Fill(startIndex, nOfStartHits);
+										hPionsBananaCutOneFile[6]->Fill(startIndex, nOfStartHits);
+									}
 								
 									for (Int_t i=0; i<nOfStartHits; i++) { // loop over all start hits
 										
@@ -566,8 +629,20 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 										
 									} // end of nOfStartHits loop
 								} // end of select negative tracks
+								
+								else if (cand->getCharge() > 0) { //select positive tracks
+									if (cutPositive->IsInside(cand->getMomentum(), cand->getBeta())) {
+										hPionsBananaCutOneFile[sector]->Fill(startIndex, nOfStartHits);
+										hPionsBananaCutOneFile[6]->Fill(startIndex, nOfStartHits);
+									}
+								}
+								
 					    
 							} //end of start2cal iter
+							
+							if (cutPositive->IsInside(mom*chrg, beta) || 
+							cutNegative->IsInside(mom*chrg, beta)) hPionsBananaCutAllStripsOneFile->Fill(sector+1);
+							
 	                    }
 	                }
 				}
@@ -682,10 +757,14 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			hTimeDifferenceVsStartStripBigRange->Write();
 			maxWidthPosOneFile->Write();
 			maxAbsTimePosOneFile->Write();
-			hNegativeTracksOneFile->Write();
-			hPionsOneFile->Write();
+			hNegativeTracksOneFile[6]->Write();
+			hPionsBetaCutOneFile[6]->Write();
+			hPionsBananaCutOneFile[6]->Write();
+			hPionsBananaCutAllStripsOneFile->Write();
 			fitMuOneFile->Write();
 			fitSigmaOneFile->Write();
+			evtCounter->Write();
+			minimumTimeOneFile->Write();
 			
 			for (Int_t i=0; i<6; i++) {
 			
@@ -697,6 +776,9 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 				out->cd();
 			
+				hNegativeTracksOneFile[i]->Write();
+				hPionsBetaCutOneFile[i]->Write();
+				hPionsBananaCutOneFile[i]->Write();
 				hXposDifference[i]->Write();
 				hTimeDifference[i]->Write();
 				hTimeDifferenceBigRange[i]->Write();
@@ -1247,6 +1329,7 @@ class StartCalibration : public HReconstructor {
 	    // histogram declarations
 	    TH1F* hMultiplicity;
 	    TH2F* hMultiplicityPerModule;
+	    TH2F* hMultiplicityPerModuleNoTimeLimit;
 	    TH2F* hWidthVsChannel;
 	    TH2F* hAbsTimeVsChannel;
 	    TH2F* hTimeDiffVsChannel[nChannels];
@@ -1311,6 +1394,10 @@ class StartCalibration : public HReconstructor {
 
 			hMultiplicityPerModule = new TH2F(
 			"hMultiplicityPerModule", "START multiplicity per module; module; mult", 
+			nModules, 0.5, nModules + 0.5, 50, 0, 50);
+
+			hMultiplicityPerModuleNoTimeLimit = new TH2F(
+			"hMultiplicityPerModuleNoTimeLimit", "START multiplicity per module NoTimeLimit; module; mult", 
 			nModules, 0.5, nModules + 0.5, 50, 0, 50);
 			   
 			hAbsTimeVsChannel = new TH2F(
@@ -1379,10 +1466,16 @@ class StartCalibration : public HReconstructor {
 			// find appropriate variables and fill the histograms with them	
 			
 			Int_t nEntr = Start2CalCategory->getEntries();
+			
 			Int_t totalMultiplicityMod0 = 0;
 			Int_t totalMultiplicityMod1 = 0;
 			Int_t totalMultiplicityMod2 = 0;
 			Int_t totalMultiplicityMod3 = 0;
+			
+			Int_t totalMultiplicityNoTimeLimitMod0 = 0;
+			Int_t totalMultiplicityNoTimeLimitMod1 = 0;
+			Int_t totalMultiplicityNoTimeLimitMod2 = 0;
+			Int_t totalMultiplicityNoTimeLimitMod3 = 0;
 			
 			for(Int_t i = 0; i<nEntr; i++) {
 				
@@ -1401,10 +1494,12 @@ class StartCalibration : public HReconstructor {
 	            Int_t multiplicityRef = Start2CalObjectRef -> getMultiplicity();
 	            
 	            hMultiplicity->Fill(multiplicityRef);
-	           if (moduleRef == 0) totalMultiplicityMod0 += multiplicityRef;
-	           if (moduleRef == 1) totalMultiplicityMod1 += multiplicityRef;
-	           if (moduleRef == 2) totalMultiplicityMod2 += multiplicityRef;
-	           if (moduleRef == 3) totalMultiplicityMod3 += multiplicityRef;
+	            
+				if (moduleRef == 0) totalMultiplicityNoTimeLimitMod0 += multiplicityRef;
+				if (moduleRef == 1) totalMultiplicityNoTimeLimitMod1 += multiplicityRef;
+				if (moduleRef == 2) totalMultiplicityNoTimeLimitMod2 += multiplicityRef;
+				if (moduleRef == 3) totalMultiplicityNoTimeLimitMod3 += multiplicityRef;
+				
 				
 				// small loop over all entries 
 				
@@ -1415,6 +1510,13 @@ class StartCalibration : public HReconstructor {
 					Double_t timeRef = Start2CalObjectRef -> getTime(i_mult+1);		
 					hWidthVsChannel -> Fill(indexRef, widthRef);
 					hAbsTimeVsChannel -> Fill (indexRef, timeRef);
+					
+					if (timeRef >= loTimeLimitForMultiplicity && timeRef <= hiTimeLimitForMultiplicity) {
+						if (moduleRef == 0) totalMultiplicityMod0 += multiplicityRef;
+						if (moduleRef == 1) totalMultiplicityMod1 += multiplicityRef;
+						if (moduleRef == 2) totalMultiplicityMod2 += multiplicityRef;
+						if (moduleRef == 3) totalMultiplicityMod3 += multiplicityRef;
+					}
 						
 					
 				}
@@ -1487,6 +1589,11 @@ class StartCalibration : public HReconstructor {
 	            hMultiplicityPerModule->Fill(3, totalMultiplicityMod2);
 	            hMultiplicityPerModule->Fill(4, totalMultiplicityMod3);
 				
+	            hMultiplicityPerModuleNoTimeLimit->Fill(1, totalMultiplicityNoTimeLimitMod0);
+	            hMultiplicityPerModuleNoTimeLimit->Fill(2, totalMultiplicityNoTimeLimitMod1);
+	            hMultiplicityPerModuleNoTimeLimit->Fill(3, totalMultiplicityNoTimeLimitMod2);
+	            hMultiplicityPerModuleNoTimeLimit->Fill(4, totalMultiplicityNoTimeLimitMod3);
+				
 			}
 		
 		return 0;
@@ -1512,6 +1619,7 @@ class StartCalibration : public HReconstructor {
 
 				hMultiplicity->Write();
 				hMultiplicityPerModule->Write();
+				hMultiplicityPerModuleNoTimeLimit->Write();
 				hWidthVsChannel->Write();
 				hAbsTimeVsChannel->Write();
 				

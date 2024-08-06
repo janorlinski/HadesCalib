@@ -50,6 +50,8 @@
 #include "hlocation.h"
 #include "hphysicsconstants.h"
 
+#include "htofhitsim.h"
+#include "hrpchitsim.h"
 #include "hrpccalpar.h"
 #include "hstart2calpar.h"
 #include "hparasciifileio.h"
@@ -68,8 +70,14 @@
 #include "TCutG.h"
 #include "hparticletracksorter.h"
 
+#include "hparticlestart2hitf.h"
+
 #include <iostream>
 #include <fstream>
+
+//#include <map>
+//#include <set>
+//#include <limits>
 
 void fillOffsets (TH1F* hOffsets, TH2F* hCharge, Int_t nCells) {
 	
@@ -455,5 +463,160 @@ Float_t GetMinTofCand() {
     return (sum / TMath::Min(3, (Int_t) tList.size()));
 }
 
+
+Float_t findMinimumTime (Int_t numOfMetaHits)
+{
+	// copied from hydra 2.6-8 and adapted to work as a standalone function
+	
+    // Function which loops inside tof and rpc hits, find the 3 hits
+    // with minimum time-of-flight, and returns the average value -> fastest signal
+    
+	HCategory*     fCatTof;      //! pointer to the tof hit data
+	HCategory*     fCatRpc;      //! pointer to the rpc hit data
+    HTofHit* pTofHit = NULL;
+    HRpcHit* pRpcHit = NULL;
+    
+    fCatTof = gHades->getCurrentEvent()->getCategory(catTofHit);
+    if (NULL == fCatTof) {
+	Warning("init", "HTofHit category not available!");
+    }
+
+    fCatRpc = gHades->getCurrentEvent()->getCategory(catRpcHit);
+    if (NULL == fCatRpc) {
+	Warning("init", "HRpcHit category not available!");
+    }
+
+    vector<Float_t> tofList, rpcList, allList; // lists of time-of-flight
+
+    //--------------------------------------------------------------------
+    // loop in HTofHit category
+    if(fCatTof) {
+	for (Int_t tofEntry = 0; tofEntry < fCatTof->getEntries(); ++tofEntry)
+	{
+	    if (NULL == (pTofHit = static_cast<HTofHit*>(fCatTof->getObject(tofEntry)))) {
+		Error("findMinimumTime", "Pointer to HTofHit object == NULL, returning");
+		return -1;
+	    }
+
+	    //--------------------------------------------------------------------
+            // skipp the embedded sim tracks
+	    if(gHades->getEmbeddingMode()>0){
+		HTofHitSim* pTofHitSim = 0;
+		pTofHitSim = dynamic_cast<HTofHitSim*>(pTofHit);
+		if(pTofHitSim){
+                    if(pTofHitSim->getNTrack1() > 0 || pTofHitSim->getNTrack2() > 0) continue;
+		}
+	    }
+	    //--------------------------------------------------------------------
+
+
+	    Float_t tofTof = pTofHit->getTof();
+	    if ( (tofTof < 0) || (tofTof > 300) ) continue; // cuts too low or high tof values
+
+	    Float_t distTof = 0;
+	    pTofHit->getDistance(distTof);
+	    if (distTof > 3000) continue; // cuts not feasible distances
+
+	    tofList.push_back(2100. * tofTof / distTof);  // fill with normalized tof to 2100 mm
+	    allList.push_back(2100. * tofTof / distTof);  // fill with normalized tof to 2100 mm
+	    
+	    //if (bDebug) nt1->Fill(gHades->getEventCounter(), 1, tofTof, distTof, 2100. * tofTof / distTof); commented bc not necessary (?) and would require further definitions
+	    
+	} // end of HTofHit loop
+    }
+    //--------------------------------------------------------------------
+
+    //--------------------------------------------------------------------
+    // loop in RpcHit category
+    Int_t tracksL[10];
+    Int_t tracksR[10];
+
+    if(fCatRpc){
+	for (Int_t rpcEntry = 0; rpcEntry < fCatRpc->getEntries(); ++rpcEntry)
+	{
+	    if (NULL == (pRpcHit = static_cast<HRpcHit*>(fCatRpc->getObject(rpcEntry)))) {
+		Error("execute", "Pointer to HRpcHit object == NULL, returning");
+		return -1;
+	    }
+
+	    //--------------------------------------------------------------------
+            // skipp the embedded sim tracks
+	    if(gHades->getEmbeddingMode()>0){
+		HRpcHitSim* pRpcHitSim = 0;
+		pRpcHitSim = dynamic_cast<HRpcHitSim*>(pRpcHit);
+		if(pRpcHitSim){
+		    pRpcHitSim->getTrackLArray(tracksL);
+                    pRpcHitSim->getTrackRArray(tracksR);
+                    Bool_t simTrack=kFALSE;
+		    for(Int_t i = 0; i < 10; i++){
+			if(tracksL[i] > 0 || tracksR[i] > 0) { simTrack = kTRUE; break;}
+		    }
+                    if(simTrack) continue;
+		}
+	    }
+	    //--------------------------------------------------------------------
+
+	    Float_t tofRpc = pRpcHit->getTof();
+	    if ( (tofRpc < 0) || (tofRpc > 300) ) continue; // cuts too low or high tof values
+
+	    Float_t xRpc = 0., yRpc = 0., zRpc = 0.;
+	    pRpcHit->getXYZLab(xRpc, yRpc, zRpc);
+	    Float_t distRpc = TMath::Sqrt(xRpc * xRpc + yRpc * yRpc + zRpc * zRpc);
+	    if (distRpc > 3000) continue; // cuts not feasible distances
+
+	    rpcList.push_back(2100. * tofRpc / distRpc);  // fill with normalized tof to 2100 mm;
+	    allList.push_back(2100. * tofRpc / distRpc);  // fill with normalized tof to 2100 mm;
+	    
+	    // if (bDebug) nt1->Fill(gHades->getEventCounter(), 0, tofRpc, distRpc, 2100. * tofRpc / distRpc); commented, see above
+	    
+	} // end of HRpcHit loop
+    }
+    //--------------------------------------------------------------------
+
+    if (allList.size() == 0) return -1; // if no good time, returns a negative value
+
+    //--------------------------------------------------------------------
+    // sort tof lists from minimum to maximum value
+    std::sort(tofList.begin(), tofList.end());
+    std::sort(rpcList.begin(), rpcList.end());
+    std::sort(allList.begin(), allList.end());
+    //--------------------------------------------------------------------
+
+
+    //--------------------------------------------------------------------
+    // select the three tof values with minimum time,
+    // and calculate the average, for tof rpc and both
+    Float_t tofSum   = 0, rpcSum   = 0, allSum   = 0;
+    Float_t tofMean  = 0, rpcMean  = 0, allMean  = 0;
+    Int_t   tofCount = 0, rpcCount = 0, allCount = 0;
+    for (vector<Float_t>::iterator it = tofList.begin(); it != tofList.end(); ++it) {
+	if (tofCount < numOfMetaHits) {
+	    tofSum += *it;
+	    tofCount++;
+	}
+    }
+    if (tofCount > 0) tofMean = tofSum / tofCount;
+
+    for (vector<Float_t>::iterator it = rpcList.begin(); it != rpcList.end(); ++it) {
+	if (rpcCount < numOfMetaHits) {
+	    rpcSum += *it;
+	    rpcCount++;
+	}
+    }
+    if (rpcCount > 0) rpcMean = rpcSum/rpcCount;
+
+    for (vector<Float_t>::iterator it = allList.begin(); it != allList.end(); ++it) {
+	if (allCount < numOfMetaHits) {
+	    allSum += *it;
+	    allCount++;
+	}
+    }
+    if (allCount > 0) allMean = allSum / allCount;
+    //--------------------------------------------------------------------
+
+    //if (bDebug) nt2->Fill(gHades->getEventCounter(), rpcList.size(), tofList.size(), tofMean, rpcMean, allMean, tofCount, rpcCount, allCount);
+
+    return allMean; // returns the minimum time from tof+rpc
+}
 
 #endif

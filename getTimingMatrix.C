@@ -8,11 +8,11 @@ void getTimingMatrix () {
     gStyle->SetPadRightMargin(0.15);
 	gStyle->SetOptStat(0);
 
-	const Int_t nDays = 1;
-	Int_t nF[nDays] = {577};
+	const Int_t nDays = 5;
+	//Int_t nF[nDays] = {577};
 	//Int_t nF[nDays] = {514};
 	//Int_t nF[nDays] = {20, 577, 833};
-	//Int_t nF[nDays] = {20, 577, 833, 837, 457};
+	Int_t nF[nDays] = {20, 577, 833, 837, 457};
 	//Int_t nF[nDays] = {20};
 	//Int_t nF = 160; //060
 	//Int_t nF = 160; //061 00h00
@@ -26,15 +26,15 @@ void getTimingMatrix () {
 	//Int_t nF = 457; //064  8 files per job
 	
 	
-	TString day[nDays] = {"061"};
+	//TString day[nDays] = {"061"};
 	//TString day[nDays] = {"039"};
 	//TString day[nDays] = {"060", "061", "062"};
-	//TString day[nDays] = {"060", "061", "062", "063", "064"};
+	TString day[nDays] = {"060", "061", "062", "063", "064"};
 	//TString day[nDays] = {"061"};
 	TString timestamp = "ALLDAY";
-	TString code = "Control05";
+	TString code = "Control06";
 	
-	const Int_t nEvts = 160000;
+	//const Int_t nEvts = 160000;
 	
 	Int_t nFtotal = 0;
 	for (Int_t day=0; day<nDays; day++) nFtotal+=nF[day];
@@ -48,8 +48,14 @@ void getTimingMatrix () {
 	TH2F* htotAllDays = new TH2F ("htotAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
 	TH2F* hmuAllDays = new TH2F ("hmuAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
 	TH2F* hsigAllDays = new TH2F ("hsigAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
-	TH2F* hnPionsAllDays = new TH2F ("hnPionsAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
+	TH2F* hnPionsBetaCutAllDays = new TH2F ("hnPionsBetaCutAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
+	TH2F* hnPionsBananaCutAllDays = new TH2F ("hnPionsBananaCutAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
+	TH2F* hnPionsBananaCutAllStripsAllDays = new TH2F ("hnPionsBananaCutAllStripsAllDays", "", nFtotal, 0.5, nFtotal+0.5, 6, 0.5, 6.5);
 	TH2F* hnNegTracksAllDays = new TH2F ("hnNegTracksAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
+	
+	TH2F* hEvtCounterAllDays = new TH2F ("hEvtCounterAllDats", "", nFtotal, 0.5, nFtotal+0.5, 2, -0.5, 1.5);
+	TH2F* hMinTimeAllDays = new TH2F ("hMinTimeAllDats", "", nFtotal, 0.5, nFtotal+0.5, 400, 0.0, 20.0);
+	
 	TH2F* hStartMultMod0AllDays = new TH2F ("hStartMultMod0AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
 	TH2F* hStartMultMod1AllDays = new TH2F ("hStartMultMod1AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
 	TH2F* hStartMultMod3AllDays = new TH2F ("hStartMultMod3AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
@@ -58,7 +64,7 @@ void getTimingMatrix () {
 	TH2I* hOneStripTimingAllDays[80];
 	TGraphErrors* gOneStripTimingAllDays[80];
 	// WATCH OUT! Please make sure that you use identical binning with the one in the source files
-	for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]  = new TH2I (Form("OneStripTimingAllDays_%i", k+1), Form("one strip timing, ch%i; File; #Delta #t [ns]", k+1), nFtotal, 0.5, nFtotal+0.5, 500, -10.0, 10.0);
+	for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]  = new TH2I (Form("OneStripTimingAllDays_%i", k+1), Form("one strip timing, ch%i; File; #delta t_{T0-RPC} [ns]", k+1), nFtotal, 0.5, nFtotal+0.5, 800, -20.0, 20.0);
 	for (Int_t k = 0; k<80; k++) { 
 		gOneStripTimingAllDays[k]  = new TGraphErrors ();
 		gOneStripTimingAllDays[k]-> SetName(Form("OneStripTimingAllDays_%i", k+1));
@@ -68,8 +74,14 @@ void getTimingMatrix () {
 	htotAllDays->SetTitle(Form("Positiom of ToT maximum vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hmuAllDays->SetTitle(Form("Mu vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hsigAllDays->SetTitle(Form("Sigma vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
-	hnPionsAllDays->SetTitle(Form("N tracks in tdiff histo ('pions') vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	hnPionsBetaCutAllDays->SetTitle(Form("Pions from beta cut vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	hnPionsBananaCutAllDays->SetTitle(Form("Pions from simple banana vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	hnPionsBananaCutAllStripsAllDays->SetTitle(Form("Pions from simple banana vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hnNegTracksAllDays->SetTitle(Form("N negative tracks vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	
+	hEvtCounterAllDays->SetTitle(Form("Event counter vs. file, days %s-%s, %s, %s; File; Evt count", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	hMinTimeAllDays->SetTitle(Form("Minimum time of N tracks vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	
 	hStartMultMod0AllDays->SetTitle(Form("Start multiplicity module 0 vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hStartMultMod1AllDays->SetTitle(Form("Start multiplicity module 1 vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hStartMultMod3AllDays->SetTitle(Form("Start multiplicity module 3 vs. file, days %s-%s, %s, %s; File; Mult per module ", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
@@ -81,39 +93,13 @@ void getTimingMatrix () {
 		
 		TString inFileDir = Form("~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/%s/%s/rpcCalibRawFiles_feb24_raw_%s_%s_%s_", 
 		day[d].Data(), code.Data(), day[d].Data(), timestamp.Data(), code.Data());
-		
-		//vector <TH1F*> vecMu;
-		//vector <TH1F*> vecSig;
-		//vector <TString> vecTit;
-		
-		TH2F* habs = new TH2F (Form("habsDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* htot = new TH2F (Form("htotDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* hmu = new TH2F (Form("hmuDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* hsig = new TH2F (Form("hsigDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* hnNegTracks = new TH2F (Form("hnNegTracksDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* hnPions = new TH2F (Form("hnPionsDay%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 80, 0.5, 80.5);
-		TH2F* hStartMultMod0 = new TH2F (Form("hStartMultMod0Day%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 50, 0.0, 50.0);
-		TH2F* hStartMultMod1 = new TH2F (Form("hStartMultMod1Day%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 50, 0.0, 50.0);
-		TH2F* hStartMultMod3 = new TH2F (Form("hStartMultMod3Day%s", day[d].Data()), "", nF[d], 0.5, nF[d]+0.5, 50, 0.0, 50.0);
-		TH2F* hmuDistribution = new TH2F (Form("hmuDistributionDay%s", day[d].Data()), "", 400, -1.0, 1.0, 80, 0.5, 80.5);
-		
-		habs->SetTitle(Form("Position of cal-time maximum vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		htot->SetTitle(Form("Positiom of ToT maximum vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		hmu->SetTitle(Form("Mu vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		hsig->SetTitle(Form("Sigma vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		hnNegTracks->SetTitle(Form("N negative tracks vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		hnPions->SetTitle(Form("N tracks in tdiff histo ('pions') vs. file, day %s, %s, %s; File; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		hStartMultMod0->SetTitle(Form("Start multiplicity module 0 vs. file, day %s, %s, %s; File; Mult per module", day[d].Data(), timestamp.Data(), code.Data()));
-		hStartMultMod1->SetTitle(Form("Start multiplicity module 1 vs. file, day %s, %s, %s; File; Mult per module", day[d].Data(), timestamp.Data(), code.Data()));
-		hStartMultMod3->SetTitle(Form("Start multiplicity module 3 vs. file, day %s, %s, %s; File; Mult per module", day[d].Data(), timestamp.Data(), code.Data()));
-		hmuDistribution->SetTitle(Form("Mu distribution, day %s, %s, %s; Time difference; START Strip", day[d].Data(), timestamp.Data(), code.Data()));
-		
+
 		for (Int_t i=1; i<=nF[d]; i++) {
 			
 			TString inPath = Form(inFileDir+"%i.root", i);
 			TFile* fIn = new TFile (inPath, "READ");
+			
 			Int_t iT = i; // index in alldays histograms
-			//if (d>0) iT += nF[d-1];
 			for (Int_t id=0; id < d; id++) iT += nF[id];
 			
 			if (fIn->GetNkeys()==0) {
@@ -124,22 +110,16 @@ void getTimingMatrix () {
 					hmuAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hsigAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hnNegTracksAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
-					hnPionsAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					hnPionsBetaCutAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					hnPionsBananaCutAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					hnPionsBananaCutAllStripsAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					hEvtCounterAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					hMinTimeAllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hStartMultMod0AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hStartMultMod1AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hStartMultMod3AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					//for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 				}
-				
-				habs->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				htot->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hmu->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hsig->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hnNegTracks->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hnPions->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hStartMultMod0->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hStartMultMod1->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
-				hStartMultMod3->GetXaxis()->SetBinLabel(i, "FILE HAS NO KEYS");
 				
 				fIn->Close();
 				continue;
@@ -151,12 +131,18 @@ void getTimingMatrix () {
 			TH1F* mu = (TH1F*) fIn->Get("fitMuOneFile");
 			TH1F* sigma = (TH1F*) fIn->Get("fitSigmaOneFile");
 			TH1F* negtracks = (TH1F*) fIn->Get("hNegativeTracksOneFile");
-			TH1F* pions = (TH1F*) fIn->Get("hPionsOneFile");
+			TH1F* pibeta = (TH1F*) fIn->Get("hPionsBetaCutOneFile");
+			TH1F* pibanana = (TH1F*) fIn->Get("hPionsBananaCutOneFile");
+			TH1F* pisect = (TH1F*) fIn->Get("hPionsBananaCutAllStripsOneFile");
 			TH2F* mult = (TH2F*) fIn->Get("hMultiplicityPerModule");
+			TH1I* evt = (TH1I*) fIn->Get("evtCounter");
+			TH1F* mintime = (TH1F*) fIn->Get("minimumTimeOneFile");
 			
+			Int_t nEvts = evt->GetBinContent(1);
+			
+			//the three lines below will give you access to the first filename of given runid 
 			TString title = mu->GetTitle();
 			TString tit = title.Remove(title.First(","));
-			
 			//cout << "Title: " << tit << endl;
 			
 			if(i==1) { // in alldays histos, only add first file, actually just day number
@@ -165,22 +151,16 @@ void getTimingMatrix () {
 				hmuAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hsigAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hnNegTracksAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
-				hnPionsAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
+				hnPionsBetaCutAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
+				hnPionsBananaCutAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
+				hnPionsBananaCutAllStripsAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
+				hEvtCounterAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
+				hMinTimeAllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hStartMultMod0AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hStartMultMod1AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hStartMultMod3AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				//for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, day[d]);
 			}
-			
-			habs->GetXaxis()->SetBinLabel(i, tit);
-			htot->GetXaxis()->SetBinLabel(i, tit);
-			hmu->GetXaxis()->SetBinLabel(i, tit);
-			hsig->GetXaxis()->SetBinLabel(i, tit);
-			hnNegTracks->GetXaxis()->SetBinLabel(i, tit);
-			hnPions->GetXaxis()->SetBinLabel(i, tit);
-			hStartMultMod0->GetXaxis()->SetBinLabel(i, tit);
-			hStartMultMod1->GetXaxis()->SetBinLabel(i, tit);
-			hStartMultMod3->GetXaxis()->SetBinLabel(i, tit);
 			
 			fOut->mkdir(tit);
 			
@@ -188,15 +168,30 @@ void getTimingMatrix () {
 			TH1F* projMod1 = (TH1F*) mult->ProjectionY("projMod1", 2, 2);
 			TH1F* projMod3 = (TH1F*) mult->ProjectionY("projMod3", 4, 4);
 			
+			for (Int_t j=1; j<=400; j++) { // loop over min time bins
+
+				//cout << "in mintime bin " << j << ", bin content = " << mintime->GetBinContent(j) << "; centers are " << mintime->GetBinCenter(j) << " / " << hMinTimeAllDays->GetBinCenter(j) << endl;
+				hMinTimeAllDays->SetBinContent(iT, j, mintime->GetBinContent(j));
+				
+			}
+			
+			for (Int_t j=1; j<=2; j++) { // loop over evt counter bins
+
+				hEvtCounterAllDays->SetBinContent(iT, j, (1.0*evt->GetBinContent(j))/nEvts);
+				
+			}
+			
+			for (Int_t j=1; j<=6; j++) { // loop over sectors
+
+				hnPionsBananaCutAllStripsAllDays->SetBinContent(iT, j, (pisect->GetBinContent(j))/nEvts);
+				
+			}
+			
 			for (Int_t j=1; j<=50; j++) { // loop over multiplicity bins
 				
 				hStartMultMod0AllDays->SetBinContent(iT, j, projMod0->GetBinContent(j));
 				hStartMultMod1AllDays->SetBinContent(iT, j, projMod1->GetBinContent(j));
 				hStartMultMod3AllDays->SetBinContent(iT, j, projMod3->GetBinContent(j));
-				
-				hStartMultMod0->SetBinContent(i, j, projMod0->GetBinContent(j));
-				hStartMultMod1->SetBinContent(i, j, projMod1->GetBinContent(j));
-				hStartMultMod3->SetBinContent(i, j, projMod3->GetBinContent(j));
 				
 			}
 			
@@ -225,7 +220,7 @@ void getTimingMatrix () {
 				TF1* gausFit = new TF1 (Form("secondFit_%i", i), gaussianWithConstBckg, fitLoEdge, fitHiEdge, 4);
 				
 				gausFit->SetParameter(0, 1.0);
-				gausFit->SetParLimits(0, 1.0, 1+3*heightOfMaximum);
+				gausFit->SetParLimits(0, 0.0, 3*heightOfMaximum);
 				
 				gausFit->SetParameter(1, 0.0);
 				gausFit->SetParLimits(1, (-1.0)*fitRadius, fitRadius);
@@ -250,7 +245,8 @@ void getTimingMatrix () {
 				//Double_t valMu = mu->GetBinContent(j);
 				//Double_t valSig = sigma->GetBinContent(j);
 				Double_t valnNegTracks = negtracks->GetBinContent(j);
-				Double_t valnPions = pions->GetBinContent(j);
+				Double_t valnPionsBeta = pibeta->GetBinContent(j);
+				Double_t valnPionsBanana = pibanana->GetBinContent(j);
 				
 				gOneStripTimingAllDays[j-1]->AddPoint(iT, valMu - 2*valSig);
 				gOneStripTimingAllDays[j-1]->AddPoint(iT, valMu + 2*valSig);
@@ -266,36 +262,18 @@ void getTimingMatrix () {
 				if (valSig!=0.210 && valSig!=0.150 && valSig!=0.270) hsigAllDays->SetBinContent(iT, j, valSig);
 				
 				hnNegTracksAllDays->SetBinContent(iT, j, valnNegTracks/nEvts);
-				hnPionsAllDays->SetBinContent(iT, j, valnPions/nEvts);
-				
-				habs->SetBinContent(i, j, valAbs);
-				htot->SetBinContent(i, j, valTot);
-				
-				if (valMu!=0.0 && TMath::Abs(valMu)!=fitRadius) hmu->SetBinContent(i, j, valMu);
-				else if (valMu==0.0 || TMath::Abs(valMu)==fitRadius) hmu->SetBinContent(i, j, -999.0);
+				hnPionsBetaCutAllDays->SetBinContent(iT, j, valnPionsBeta/nEvts);
+				hnPionsBananaCutAllDays->SetBinContent(iT, j, valnPionsBanana/nEvts);
 				
 				if (valMu!=0.0 && TMath::Abs(valMu)!=fitRadius) hmuDistributionAllDays->Fill(valMu, j);
-				if (valMu!=0.0 && TMath::Abs(valMu)!=fitRadius) hmuDistribution->Fill(valMu, j);
-			
-				if (valSig!=0.210 && valSig!=0.150 && valSig!=0.270) hsig->SetBinContent(i, j, valSig);
-				
-				hnNegTracks->SetBinContent(i, j, valnNegTracks/nEvts);
-				hnPions->SetBinContent(i, j, valnPions/nEvts);
-
-				
+								
 				Int_t nBinsTimeDiff = projection->GetNbinsX();
-				
-				if (iT==1) {
-					
-
-				}
 				
 				if (i==1) hOneStripTimingAllDays[j-1]->GetXaxis()->SetBinLabel(iT, day[d]);
 				
 				for (Int_t k=0; k<nBinsTimeDiff; k++) { // loop over entries in tdiff histo for the given channel
 					
-					//cout << "In file " << iT << ", strip " << j << ", bin " << k+1 << ", tdiff = " << projection->GetBinContent(k+1) << endl;
-					hOneStripTimingAllDays[j-1]->Fill(iT, projection->GetBinCenter(k+1), projection->GetBinContent(k+1));
+					hOneStripTimingAllDays[j-1]->SetBinContent(iT, k+1, projection->GetBinContent(k+1));
 					
 				}
 				
@@ -310,66 +288,7 @@ void getTimingMatrix () {
 	
 		cout << "\n Done!" << endl;
 		
-		TString canvname = Form("timingMatrix_%s_%s_%s.pdf", day[d].Data(), timestamp.Data(), code.Data());
-		
-		TCanvas* cMu = new TCanvas ("" ,"", 1200, 800);
-		cMu->SetGridy(1);
-		//cMu->SetGridx(1);
-		hmu->SetMinimum(-1.5);
-		hmu->SetMaximum(1.5);
-		hmu->Draw("colz");
-		cMu->Print(canvname+"(");
-		
-		TCanvas* cSig = new TCanvas ("" ,"", 1200, 800);
-		cSig->SetGridy(1);
-		//cSig->SetGridx(1);
-		hsig->Draw("colz");
-		cSig->Print(canvname);
-		
-		TCanvas* cMuDist = new TCanvas ("" ,"", 1200, 800);
-		cMuDist->SetGridy(1);
-		//cMuDist->SetGridx(1);
-		hmuDistribution->Draw("colz");
-		cMuDist->Print(canvname);
-		
-		TCanvas* cNTracks = new TCanvas ("" ,"", 1200, 800);
-		cNTracks->SetGridy(1);
-		hnNegTracks->Draw("colz");
-		cNTracks->Print(canvname);
-		
-		TCanvas* cNPions = new TCanvas ("" ,"", 1200, 800);
-		cNPions->SetGridy(1);
-		hnPions->Draw("colz");
-		cNPions->Print(canvname);
-		
-		TCanvas* cAbs = new TCanvas ("" ,"", 1200, 800);
-		cAbs->SetGridy(1);
-		//cAbs->SetGridx(1);
-		habs->Draw("colz");
-		cAbs->Print(canvname);
-		
-		TCanvas* cTot = new TCanvas ("" ,"", 1200, 800);
-		cTot->SetGridy(1);
-		//cTot->SetGridx(1);
-		htot->Draw("colz");
-		cTot->Print(canvname+")");
-		
-		// save hists
-		
-		fOut->cd(day[d]);
-		
-		habs->Write();
-		htot->Write();
-		hmu->Write();
-		hmuDistribution->Write();
-		hsig->Write();
-		hnNegTracks->Write();
-		hnPions->Write();
-		hStartMultMod0->Write();
-		hStartMultMod1->Write();
-		hStartMultMod3->Write();
 	}
-	
 
 	TString canvname = Form("timingMatrix_%s-%s_%s_%s.pdf", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data());
 	TString canvnameOST = Form("timingMatrix_OST_%s-%s_%s_%s.pdf", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data());
@@ -377,6 +296,7 @@ void getTimingMatrix () {
 	TLine* line[nDays-1];
 	TLine* lineMult[nDays-1];
 	TLine* lineOST[nDays-1];
+	
 	Int_t cumDays = 0.0; //cumulated day index 
 	for (Int_t d=0; d<nDays-1; d++) {
 		
@@ -431,11 +351,20 @@ void getTimingMatrix () {
 	for (Int_t d=0; d<nDays-1; d++) line[d]->Draw("same");
 	cNTracksAllDays->Print(canvname);
 	
-	TCanvas* cNPionsAllDays = new TCanvas ("" ,"", 1200, 800);
-	cNPionsAllDays->SetGridy(1);
-	hnPionsAllDays->Draw("colz");
+	TCanvas* cNPionsBetaCutAllDays = new TCanvas ("" ,"", 1200, 800);
+	cNPionsBetaCutAllDays->SetGridy(1);
+	hnPionsBetaCutAllDays->Draw("colz");
 	for (Int_t d=0; d<nDays-1; d++) line[d]->Draw("same");
-	cNPionsAllDays->Print(canvname);
+	cNPionsBetaCutAllDays->Print(canvname);
+	
+	TCanvas* cNPionsBananaCutAllDays = new TCanvas ("" ,"", 1200, 800);
+	cNPionsBananaCutAllDays->SetGridy(1);
+	hnPionsBananaCutAllDays->Draw("colz");
+	for (Int_t d=0; d<nDays-1; d++) line[d]->Draw("same");
+	cNPionsBananaCutAllDays->Print(canvname);
+	
+	// comparison of n pions vs. file, all start strips, sector-wise
+	//TCanvas* cNPionsSectorWiseAllDays = new TCanvas ("" ,"", 1200, 800);
 	
 	TCanvas* cStartMultMod0 = new TCanvas ("" ,"", 1200, 800);
 	cStartMultMod0->SetGridy(1);
@@ -449,7 +378,6 @@ void getTimingMatrix () {
 	cStartMultMod1->SetLogz(kTRUE);
 	for (Int_t d=0; d<nDays-1; d++) lineMult[d]->Draw("same");
 	cStartMultMod1->Print(canvname);
-	
 	
 	TCanvas* cStartMultMod3 = new TCanvas ("" ,"", 1200, 800);
 	cStartMultMod3->SetGridy(1);
@@ -465,8 +393,11 @@ void getTimingMatrix () {
 	for (Int_t d=0; d<nDays-1; d++) line[d]->Draw("same");
 	cTotAllDays->Print(canvname+")");
 	
-	gStyle->SetPalette(kCool);
+	// the following section saves all onestriptiming's to a multi-page pdf
+	// might consume too much resources and cause root to quit
 	
+	
+	gStyle->SetPalette(kCool);
 	TCanvas* cOneStripTimingAllDays[80];
 	
 	for (Int_t k=0; k<80; k++) {
@@ -483,13 +414,15 @@ void getTimingMatrix () {
 		
 		for (Int_t d=0; d<nDays-1; d++) lineOST[d]->Draw("same");
 		
+		/*
 		if (k==0) cOneStripTimingAllDays[k]->Print(canvnameOST+"(");
 		else if (k>0 && k<16) cOneStripTimingAllDays[k]->Print(canvnameOST);
 		else if (k>=20 && k<36) cOneStripTimingAllDays[k]->Print(canvnameOST);
 		else if (k>=60 && k<67) cOneStripTimingAllDays[k]->Print(canvnameOST);
 		else if (k==67) cOneStripTimingAllDays[k]->Print(canvnameOST+")");
 		else continue;
-			
+		*/
+		
 	}
 	
 	
@@ -501,7 +434,11 @@ void getTimingMatrix () {
 	hmuDistributionAllDays->Write();
 	hsigAllDays->Write();
 	hnNegTracksAllDays->Write();
-	hnPionsAllDays->Write();
+	hnPionsBetaCutAllDays->Write();
+	hnPionsBananaCutAllDays->Write();
+	hnPionsBananaCutAllStripsAllDays->Write();
+	hEvtCounterAllDays->Write();
+	hMinTimeAllDays->Write();
 	hStartMultMod0AllDays->Write();
 	hStartMultMod1AllDays->Write();
 	hStartMultMod3AllDays->Write();

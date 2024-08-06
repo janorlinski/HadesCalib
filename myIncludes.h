@@ -464,8 +464,7 @@ Float_t GetMinTofCand() {
 }
 
 
-Float_t findMinimumTime (Int_t numOfMetaHits)
-{
+Float_t findMinimumTime (Int_t numOfMetaHits) {
 	// copied from hydra 2.6-8 and adapted to work as a standalone function
 	
     // Function which loops inside tof and rpc hits, find the 3 hits
@@ -618,5 +617,7 @@ Float_t findMinimumTime (Int_t numOfMetaHits)
 
     return allMean; // returns the minimum time from tof+rpc
 }
+
+
 
 #endif

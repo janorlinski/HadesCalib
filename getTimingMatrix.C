@@ -56,9 +56,9 @@ void getTimingMatrix () {
 	TH2F* hEvtCounterAllDays = new TH2F ("hEvtCounterAllDats", "", nFtotal, 0.5, nFtotal+0.5, 2, -0.5, 1.5);
 	TH2F* hMinTimeAllDays = new TH2F ("hMinTimeAllDats", "", nFtotal, 0.5, nFtotal+0.5, 400, 0.0, 20.0);
 	
-	TH2F* hStartMultMod0AllDays = new TH2F ("hStartMultMod0AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
-	TH2F* hStartMultMod1AllDays = new TH2F ("hStartMultMod1AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
-	TH2F* hStartMultMod3AllDays = new TH2F ("hStartMultMod3AllDays", "", nFtotal, 0.5, nFtotal+0.5, 50, 0.0, 50.0);
+	TH2F* hStartMultMod0AllDays = new TH2F ("hStartMultMod0AllDays", "", nFtotal, 0.5, nFtotal+0.5, 15, 0.0, 15.0);
+	TH2F* hStartMultMod1AllDays = new TH2F ("hStartMultMod1AllDays", "", nFtotal, 0.5, nFtotal+0.5, 15, 0.0, 15.0);
+	TH2F* hStartMultMod3AllDays = new TH2F ("hStartMultMod3AllDays", "", nFtotal, 0.5, nFtotal+0.5, 15, 0.0, 15.0);
 	TH2F* hmuDistributionAllDays = new TH2F ("hmuDistributionAllDays", "", 400, -1.0, 1.0, 80, 0.5, 80.5);
 	
 	TH2I* hOneStripTimingAllDays[80];
@@ -80,7 +80,7 @@ void getTimingMatrix () {
 	hnNegTracksAllDays->SetTitle(Form("N negative tracks vs. file, days %s-%s, %s, %s; File; START Strip", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	
 	hEvtCounterAllDays->SetTitle(Form("Event counter vs. file, days %s-%s, %s, %s; File; Evt count", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
-	hMinTimeAllDays->SetTitle(Form("Minimum time of N tracks vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
+	hMinTimeAllDays->SetTitle(Form("Minimum time of N tracks vs. file, days %s-%s, %s, %s; File; Min time [ns]", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	
 	hStartMultMod0AllDays->SetTitle(Form("Start multiplicity module 0 vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
 	hStartMultMod1AllDays->SetTitle(Form("Start multiplicity module 1 vs. file, days %s-%s, %s, %s; File; Mult per module", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()));
@@ -187,7 +187,7 @@ void getTimingMatrix () {
 				
 			}
 			
-			for (Int_t j=1; j<=50; j++) { // loop over multiplicity bins
+			for (Int_t j=1; j<=15; j++) { // loop over multiplicity bins
 				
 				hStartMultMod0AllDays->SetBinContent(iT, j, projMod0->GetBinContent(j));
 				hStartMultMod1AllDays->SetBinContent(iT, j, projMod1->GetBinContent(j));

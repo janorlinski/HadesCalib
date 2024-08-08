@@ -31,6 +31,7 @@ void getTimingMatrix () {
 	//TString day[nDays] = {"060", "061", "062"};
 	TString day[nDays] = {"060", "061", "062", "063", "064"};
 	//TString day[nDays] = {"061"};
+	//TString timestamp = "00h00";
 	TString timestamp = "ALLDAY";
 	TString code = "Control06";
 	
@@ -42,6 +43,7 @@ void getTimingMatrix () {
 	
 	TFile* fOut = new TFile(Form("timingMatrix_%s-%s_%s_%s.root", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()), "RECREATE");
 	fOut->mkdir("OneStripTiming");
+	fOut->mkdir("OneStripToT");
 	fOut->cd();
 	
 	TH2F* habsAllDays = new TH2F ("habsAllDays", "", nFtotal, 0.5, nFtotal+0.5, 80, 0.5, 80.5);
@@ -62,9 +64,11 @@ void getTimingMatrix () {
 	TH2F* hmuDistributionAllDays = new TH2F ("hmuDistributionAllDays", "", 400, -1.0, 1.0, 80, 0.5, 80.5);
 	
 	TH2I* hOneStripTimingAllDays[80];
+	TH2I* hOneStripToTAllDays[80];
 	TGraphErrors* gOneStripTimingAllDays[80];
 	// WATCH OUT! Please make sure that you use identical binning with the one in the source files
 	for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]  = new TH2I (Form("OneStripTimingAllDays_%i", k+1), Form("one strip timing, ch%i; File; #delta t_{T0-RPC} [ns]", k+1), nFtotal, 0.5, nFtotal+0.5, 800, -20.0, 20.0);
+	for (Int_t k = 0; k<80; k++) hOneStripToTAllDays[k]  = new TH2I (Form("OneStripToTAllDays_%i", k+1), Form("one strip ToT, ch%i; File; ToT [ns]", k+1), nFtotal, 0.5, nFtotal+0.5, 200, 0.0, 50.0);
 	for (Int_t k = 0; k<80; k++) { 
 		gOneStripTimingAllDays[k]  = new TGraphErrors ();
 		gOneStripTimingAllDays[k]-> SetName(Form("OneStripTimingAllDays_%i", k+1));
@@ -118,7 +122,10 @@ void getTimingMatrix () {
 					hStartMultMod0AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hStartMultMod1AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
 					hStartMultMod3AllDays->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
-					//for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					for (Int_t k = 0; k<80; k++) {
+						hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+						hOneStripToTAllDays[k]->GetXaxis()->SetBinLabel(iT, "FILE HAS NO KEYS");
+					}
 				}
 				
 				fIn->Close();
@@ -128,6 +135,7 @@ void getTimingMatrix () {
 			//cout << "getting histograms from file " << inPath << " ..." << endl;
 			TH1F* abs = (TH1F*) fIn->Get("maxAbsTimePosOneFile");
 			TH1F* tot = (TH1F*) fIn->Get("maxWidthPosOneFile");
+			TH2F* totVsStrip = (TH2F*) fIn->Get("hToTVsStartStrip");
 			TH1F* mu = (TH1F*) fIn->Get("fitMuOneFile");
 			TH1F* sigma = (TH1F*) fIn->Get("fitSigmaOneFile");
 			TH1F* negtracks = (TH1F*) fIn->Get("hNegativeTracksOneFile");
@@ -159,7 +167,10 @@ void getTimingMatrix () {
 				hStartMultMod0AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hStartMultMod1AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
 				hStartMultMod3AllDays->GetXaxis()->SetBinLabel(iT, day[d]);
-				//for (Int_t k = 0; k<80; k++) hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, day[d]);
+				for (Int_t k = 0; k<80; k++) {
+					hOneStripTimingAllDays[k]->GetXaxis()->SetBinLabel(iT, day[d]);
+					hOneStripToTAllDays[k]->GetXaxis()->SetBinLabel(iT, day[d]);
+				}
 			}
 			
 			fOut->mkdir(tit);
@@ -202,6 +213,8 @@ void getTimingMatrix () {
 				// this way fit optimizations can be done without resending all the data to the batchfarm
 				
 				TH1F* projection = (TH1F*) fIn->Get(Form("projection__ch%i", j));
+				TH1F* projWidth  = (TH1F*) totVsStrip->ProjectionY(Form("projWidth__ch%i", j), j, j);
+
 				Int_t nEntrOfSource = projection->GetEntries();
 				//projection->ShowPeaks(0.1, "", 0.5);
 				
@@ -267,13 +280,20 @@ void getTimingMatrix () {
 				
 				if (valMu!=0.0 && TMath::Abs(valMu)!=fitRadius) hmuDistributionAllDays->Fill(valMu, j);
 								
+								
+				//if (i==1) hOneStripTimingAllDays[j-1]->GetXaxis()->SetBinLabel(iT, day[d]);
 				Int_t nBinsTimeDiff = projection->GetNbinsX();
-				
-				if (i==1) hOneStripTimingAllDays[j-1]->GetXaxis()->SetBinLabel(iT, day[d]);
+				Int_t nBinsWidth = projWidth->GetNbinsX();
 				
 				for (Int_t k=0; k<nBinsTimeDiff; k++) { // loop over entries in tdiff histo for the given channel
 					
 					hOneStripTimingAllDays[j-1]->SetBinContent(iT, k+1, projection->GetBinContent(k+1));
+					
+				}
+				
+				for (Int_t k=0; k<nBinsWidth; k++) { // loop over entries in tdiff histo for the given channel
+					
+					hOneStripToTAllDays[j-1]->SetBinContent(iT, k+1, projWidth->GetBinContent(k+1));
 					
 				}
 				
@@ -283,7 +303,7 @@ void getTimingMatrix () {
 			}
 			
 			fIn->Close();	
-			cout <<"\r" << i << " files analyzed in day " << day[d] << flush;
+			cout <<"\r" << i << " / " << nF[d] << " files analyzed in day " << day[d] << flush;
 		}
 	
 		cout << "\n Done!" << endl;
@@ -296,6 +316,7 @@ void getTimingMatrix () {
 	TLine* line[nDays-1];
 	TLine* lineMult[nDays-1];
 	TLine* lineOST[nDays-1];
+	TLine* lineOSToT[nDays-1];
 	
 	Int_t cumDays = 0.0; //cumulated day index 
 	for (Int_t d=0; d<nDays-1; d++) {
@@ -303,7 +324,8 @@ void getTimingMatrix () {
 		cumDays+=nF[d];
 		line[d] = new TLine (cumDays+0.5, 0.5, cumDays+0.5, 80.5);
 		lineMult[d] = new TLine (cumDays+0.5, 0, cumDays+0.5, 50);
-		lineOST[d] = new TLine (cumDays+0.5, -10, cumDays+0.5, 10);
+		lineOST[d] = new TLine (cumDays+0.5, -20, cumDays+0.5, 20);
+		lineOSToT[d] = new TLine (cumDays+0.5, 0, cumDays+0.5, 50);
 		
 		line[d]->SetLineStyle(2);
 		line[d]->SetLineWidth(2);
@@ -311,6 +333,8 @@ void getTimingMatrix () {
 		lineMult[d]->SetLineWidth(2);
 		lineOST[d]->SetLineStyle(2);
 		lineOST[d]->SetLineWidth(2);
+		lineOSToT[d]->SetLineStyle(2);
+		lineOSToT[d]->SetLineWidth(2);
 		
 	}
 	
@@ -399,18 +423,28 @@ void getTimingMatrix () {
 	
 	gStyle->SetPalette(kCool);
 	TCanvas* cOneStripTimingAllDays[80];
+	TCanvas* cOneStripToTAllDays[80];
 	
 	for (Int_t k=0; k<80; k++) {
 		
-		cOneStripTimingAllDays[k] = new TCanvas (Form("ch%i", k+1) ,Form("ch%i", k+1), 1200, 800);
+		cOneStripTimingAllDays[k] = new TCanvas (Form("OneStripTiming_ch%i", k+1) ,Form("ch%i", k+1), 1200, 800);
+		cOneStripToTAllDays[k] = new TCanvas (Form("OneStripToT_ch%i", k+1) ,Form("ch%i", k+1), 1200, 800);
+		
 		//cTotAllDays->SetGridy(1);
 		//cTot->SetGridx(1);
+		cOneStripTimingAllDays[k]->cd();
 		hOneStripTimingAllDays[k]->Draw("colz");
 		gOneStripTimingAllDays[k]->Draw("P same");
 		gOneStripTimingAllDays[k]->SetMarkerStyle(20);
 		gOneStripTimingAllDays[k]->SetMarkerSize(0.3);
 		//gOneStripTimingAllDays[k]->SetLineColorAlpha(1, 0.2);
 		//gOneStripTimingAllDays[k]->SetMarkerColorAlpha(1, 0.4);
+		
+		for (Int_t d=0; d<nDays-1; d++) lineOST[d]->Draw("same");
+		
+		
+		cOneStripToTAllDays[k]->cd();
+		hOneStripToTAllDays[k]->Draw("colz");
 		
 		for (Int_t d=0; d<nDays-1; d++) lineOST[d]->Draw("same");
 		
@@ -445,6 +479,8 @@ void getTimingMatrix () {
 	
 	fOut->cd("OneStripTiming");
 	for (Int_t j=1; j<=80; j++) cOneStripTimingAllDays[j-1]->Write();
+	fOut->cd("OneStripToT");
+	for (Int_t j=1; j<=80; j++) cOneStripToTAllDays[j-1]->Write();
 	
 	cout << "Saving and closing main ROOT file " << Form("timingMatrix_%s-%s_%s_%s.root", day[0].Data(), day[nDays-1].Data(), timestamp.Data(), code.Data()) << endl;
 	

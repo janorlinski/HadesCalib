@@ -72,6 +72,8 @@
 
 #include "hparticlestart2hitf.h"
 
+#include "hstart2clusterfinder.h"
+
 #include <iostream>
 #include <fstream>
 
@@ -224,7 +226,7 @@ void fillChargeOffsetsAdvanced (TH1F* hOffsets, TH2F* hCharge, Float_t chargeThr
 	}
 }
 
-void fillTimeAndPosOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F* hSource, Double_t fitRadius, TFile* out, TString dirname) {
+void fillPosOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F* hSource, Double_t fitRadius, TFile* out, TString dirname) {
 	
 	out->cd();
 	out->mkdir(dirname);
@@ -243,7 +245,7 @@ void fillTimeAndPosOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare
 		
 		// set fit range
 		
-		Double_t positionOfMaximum = 3.6; // ugly hardcoded part - look for pions!!!
+		Double_t positionOfMaximum = 0.0; // ugly hardcoded part - look for pions!!!
 		//Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
 		Double_t fitLoEdge = positionOfMaximum - fitRadius;
 		Double_t fitHiEdge = positionOfMaximum + fitRadius;
@@ -253,7 +255,58 @@ void fillTimeAndPosOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare
 		
 		TF1* gausFit = new TF1 (Form("fit_%i", i), "gausn", fitLoEdge, fitHiEdge);
 		gausFit->SetParLimits(1, positionOfMaximum - 0.5*fitRadius, positionOfMaximum + 0.5*fitRadius);
+		gausFit->SetParLimits(2, 0.1, 0.3); //sigma must be rather narrow, to not fit in the bckground region
 		gausFit->SetRange(fitLoEdge, fitHiEdge);
+		projection->Fit(gausFit, "RQ");
+		
+		Double_t center = gausFit->GetParameter(1);
+		Double_t sigma = gausFit->GetParameter(2);
+		Double_t ndf = gausFit->GetNDF();
+		Double_t chi = 0.0;
+		if (ndf != 0.0) Double_t chi = gausFit->GetChisquare() / ndf;
+		
+		hOffsets->SetBinContent(i+1, center);
+		hFitSigma->SetBinContent(i+1, sigma);
+		hFitChiSquare->SetBinContent(i+1, chi);
+		projection->Write();
+		
+
+	}
+}
+
+void fillTimeOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F* hSource, Double_t fitRadius, TFile* out, TString dirname) {
+	
+	out->cd();
+	out->mkdir(dirname);
+	out->cd(dirname);
+	
+	const Int_t nCells = 192;
+	
+	for (Int_t i=0; i<nCells; i++) { // loop over cells
+	
+		// cout << "Calculating offset for cell with index " << i << endl; 
+	
+		// get appropriate projection
+		
+		TH1F* projection = (TH1F*) hSource->ProjectionY(Form("projection_%i", i+1), i+1, i+1);
+		Int_t nBinsOfSource = projection->GetNbinsX();
+		
+		// set fit range
+		
+		Double_t positionOfMaximum = 0.0; // ugly hardcoded part - look for pions!!!
+		//Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
+		Double_t fitLoEdge = positionOfMaximum - fitRadius;
+		Double_t fitHiEdge = positionOfMaximum + fitRadius;
+		//std::cout << "Gaus will be fitted in range [" << fitLoEdge << ", " << fitHiEdge << "] \n";
+		
+		// fit and fill offset
+		
+		TF1* gausFit = new TF1 (Form("fit_%i", i), "gausn", fitLoEdge, fitHiEdge);
+		
+		gausFit->SetParLimits(1, positionOfMaximum - 0.5*fitRadius, positionOfMaximum + 0.5*fitRadius);
+		gausFit->SetParLimits(2, 0.1, 0.3); //sigma must be rather narrow, to not fit in the bckground region
+		gausFit->SetRange(fitLoEdge, fitHiEdge);
+		
 		projection->Fit(gausFit, "RQ");
 		
 		Double_t center = gausFit->GetParameter(1);

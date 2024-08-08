@@ -10,6 +10,8 @@
 
 #include "hstart2cal.h"
 
+#include "hstart2clusterfinder.h"
+
 #include "myIncludes.h"
 
 //global RPC variables
@@ -48,8 +50,8 @@ const Float_t tDiffHiLimit =  10.0;
 const Int_t nBinsForWidth = 200;
 const Int_t nBinsForTimeDiff = 400;
 
-const Int_t refCh[4] = {9, 23, 42, 62}; //c+c
-//const Int_t refCh[4] = {11, 28, 42, 62}; //au+au
+//const Int_t refCh[4] = {9, 23, 42, 62}; //c+c
+const Int_t refCh[4] = {11, 28, 42, 67}; //au+au
  
 //const Float_t refWidthLo[2] = {15.4, 12.6};
 //const Float_t refWidthHi[2] = {16.4, 13.3};
@@ -117,11 +119,16 @@ const Float_t widthBinWidth = (widthHiLimitTW - widthLoLimitTW)/nPointsForTimeWa
 Int_t getRefModule(Int_t channel) {
 	
 	//ugly hardcoded function i know
-	Int_t module = -1;
-	if (channel >=1 && channel <= nChPerMod) module = 1;
-	else if (channel >=nChPerMod+1 && channel <= 2*nChPerMod) module = 0;
+	
+	//Int_t module = -1;
+	//if (channel >=1 && channel <= nChPerMod) module = 1;
+	//else if (channel >=nChPerMod+1 && channel <= 2*nChPerMod) module = 0;
 	//cout << "getRefModule returning " << module << " for channel = " << channel << endl;
-	return module;
+	
+	if (channel >= 60) return 0;
+	else return 3;
+	
+	//return module;
 }
 
 Bool_t skipThisChannel (Int_t channel) {
@@ -152,7 +159,6 @@ Bool_t skipThisChannel (Int_t channel) {
 	return result;
 }
 
-
 class FillRpcAndStartHistosWithTracking : public HReconstructor {
 
 	protected:
@@ -174,10 +180,16 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	    // for start calibration	    
 	    TH2F* hMultiplicityPerModule;
 	    TH2F* hMultiplicityPerModuleNoTimeLimit;
+	    TH1F* hFelixClusterNumberMod0;
+	    TH1F* hFelixClusterNumberMod1;
+	    TH1F* hFelixClusterNumberAllMods;
+	    //TH1F* hSimonClusterNumber;
+	    TH2F* hStartVetoCorrelation;
 		TH2F* hToTVsStartStrip;
 		TH2F* hAbsTimeVsStartStrip;
 	    TH2F* hTimeDiffVsChannel[nChannels];
 	    TH2F* hTimeDiffVsWidth[nChannels];
+	    TH2F* hRpcTimeDiffVsWidth[nChannels];
 	    TH2F* hTimeDiffVsWidthBigTimeRange[nChannels];
 	    TH1F* hTimeDiffForTimeWalk[nChannels][nPointsForTimeWalk];
 	    TH1F* hWidthForTimeWalk[nChannels][nPointsForTimeWalk];
@@ -279,6 +291,10 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			hMultiplicityPerModule = new TH2F("hMultiplicityPerModule", "START multiplicity per module; module; mult", nModules, 0.5, nModules + 0.5, 15, 0, 15);
 			hMultiplicityPerModuleNoTimeLimit = new TH2F("hMultiplicityPerModuleNoTimeLimit", "START multiplicity per module NoTimeLimit; module; mult", nModules, 0.5, nModules + 0.5, 15, 0, 15);
+			hFelixClusterNumberMod0 = new TH1F("hFelixClusterNumberMod0", "Number of clusters per event, Felix' code, mod 0; Cluster size; START channel", 50, 0, 50);
+			hFelixClusterNumberMod1 = new TH1F("hFelixClusterNumberMod1", "Number of clusters per event, Felix' code, mod 1; Cluster size; START channel", 50, 0, 50);
+			hFelixClusterNumberAllMods = new TH1F("hFelixClusterNumberAllMods", "Number of clusters per event, Felix' code, all mods; Cluster size; START channel", 50, 0, 50);
+			hStartVetoCorrelation = new TH2F("hStartVetoCorrelation", "Correlation between START and VETO hits; VETO channel; START channel", 20, 60.5, 80.5, 40, 0.5, 40.5);
 			   
 			hToTVsStartStrip = new TH2F("hToTVsStartStrip", "start ToT vs. start ch", nChannels, 0.5, nChannels + 0.5, 200, 0, 50);
 			hAbsTimeVsStartStrip = new TH2F("hAbsTimeVsStartStrip", "start abs time vs. start ch", nChannels, 0.5, nChannels + 0.5, 2000, -1000, 1000);
@@ -312,17 +328,17 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				hXposDifference[i] = new TH2F(
 				Form("hXposDifference_sect%i",i+1),
 				Form("X position difference vs. cell number, sector %i; 32 #times module + cell; x diff", i+1),
-				nCells, loLimitCells, hiLimitCells, 200,-100, 100);
+				nCells, loLimitCells, hiLimitCells, 400,-100, 100);
 				
 				hTimeDifference[i] = new TH2F(
 				Form("hTimeDifference_sect%i",i+1),
 				Form("ToA difference vs. cell number, sector %i; 32 #times module + cell; t diff [ns]", i+1),
-				nCells, loLimitCells, hiLimitCells, 100,-10, 10); // originally 200, -5, 5
+				nCells, loLimitCells, hiLimitCells, 800,-10, 10); // originally 200, -5, 5
 				
 				hTimeDifferenceBigRange[i] = new TH2F(
 				Form("hTimeDifferenceBigRange_sect%i",i+1),
 				Form("ToA difference vs. cell number [big range], sector %i; 32 #times module + cell; t diff [ns]", i+1), 
-				nCells, loLimitCells, hiLimitCells, 200, -100, 100);
+				nCells, loLimitCells, hiLimitCells, 800, -100, 100);
 					   					   			   
 				hXposOffsets[i] = new TH1F(
 				Form("hXposOffsets_sect%i", i+1),
@@ -345,6 +361,11 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				hTimeDiffVsWidth[i] = new TH2F(
 				Form("hTimeDiffVsWidth_%i", i+1), 
 				Form("histogram for time walk, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
+				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
+		   
+				hRpcTimeDiffVsWidth[i] = new TH2F(
+				Form("hRpcTimeDiffVsWidth_%i", i+1), 
+				Form("histogram for time walk with RPC tdiffs, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
 				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
 		   
 				hTimeDiffVsWidthBigTimeRange[i] = new TH2F(
@@ -431,6 +452,12 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	        
 	        minimumTimeOneFile->Fill(findMinimumTime(3));
 	        
+	        // cluster finder initialization
+	        
+	        std::vector<start_singlestriphit> allstriphitsperentryMod0;
+	        std::vector<start_singlestriphit> allstriphitsperentryMod1;
+	        std::vector<start_singlestriphit> allstriphitsperentryAllMods;
+	        
 	        // START STUFF WITHOUT TRACKING
 	        
 			Int_t nEntr = Start2CalCategory->getEntries();
@@ -471,10 +498,16 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 					
 					
 					Double_t widthRef = Start2CalObjectRef -> getWidth(i_mult+1);
-					Double_t timeRef = Start2CalObjectRef -> getTime(i_mult+1);		
+					Double_t timeRef = Start2CalObjectRef -> getTime(i_mult+1);
+							
 					hToTVsStartStrip -> Fill(indexRef, widthRef);
 					hAbsTimeVsStartStrip -> Fill(indexRef, timeRef);
 					
+					start_singlestriphit currentsinglestriphit(moduleRef, indexRef, multiplicityRef, timeRef, widthRef);
+					allstriphitsperentryAllMods.push_back(currentsinglestriphit);
+					if (moduleRef == 0) allstriphitsperentryMod0.push_back(currentsinglestriphit);
+					if (moduleRef == 1) allstriphitsperentryMod1.push_back(currentsinglestriphit);
+
 					if (timeRef >= loTimeLimitForMultiplicity && timeRef <= hiTimeLimitForMultiplicity) {
 						if (moduleRef == 0) totalMultiplicityMod0 += multiplicityRef;
 						if (moduleRef == 1) totalMultiplicityMod1 += multiplicityRef;
@@ -514,10 +547,11 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 							Double_t tDiff = timeRef - time;
 							
 							hTimeDiffVsChannel[indexRef - 1] -> Fill(index, tDiff);
+							if (moduleRef == 3 && time > timeRef-2.0 && time < timeRef+2.0) hStartVetoCorrelation->Fill(indexRef, index);
 							
 							// time walk analysis
 							
-							if (indexRef == refCh[0] && widthRef > refWidthLo[0] && widthRef < refWidthHi[0]) {
+							if (indexRef == refCh[getRefModule(1)] && widthRef > refWidthLo[0] && widthRef < refWidthHi[0]) {
 								
 								hTimeDiffVsWidth[index - 1]->Fill(width, tDiff);
 								hTimeDiffVsWidthBigTimeRange[index - 1]->Fill(width, tDiff);
@@ -529,7 +563,7 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 								
 							}
 							
-							if (indexRef == refCh[1] && widthRef > refWidthLo[1] && widthRef < refWidthHi[1]) {
+							if (indexRef == refCh[getRefModule(1+nChPerMod)] && widthRef > refWidthLo[1] && widthRef < refWidthHi[1]) {
 								
 								hTimeDiffVsWidth[index - 1]->Fill(width, tDiff);
 								hTimeDiffVsWidthBigTimeRange[index - 1]->Fill(width, tDiff);
@@ -557,7 +591,23 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			}
 			
 			iterStart2Cal->Reset(); // return to 0 for the next loop
-			 
+			
+			//cluster finding
+			HStart2ClusterFinder clfinder;
+			clfinder.setclusterthresholds(1, 4, 10000); // ToArange,striprange,maxclustersizeinstrips
+			
+			std::vector<start_singlestriphit> allmaxstripsinclusterMod0 = clfinder.findcluster(allstriphitsperentryMod0);
+			std::vector<start_singlestriphit> allmaxstripsinclusterMod1 = clfinder.findcluster(allstriphitsperentryMod1);
+			std::vector<start_singlestriphit> allmaxstripsinclusterAllMods = clfinder.findcluster(allstriphitsperentryAllMods);
+			
+			Int_t nFoundClustersMod0 = allmaxstripsinclusterMod0.size();
+			Int_t nFoundClustersMod1 = allmaxstripsinclusterMod1.size();
+			Int_t nFoundClustersAllMods = allmaxstripsinclusterAllMods.size();
+			
+			hFelixClusterNumberMod0->Fill(nFoundClustersMod0);
+			hFelixClusterNumberMod1->Fill(nFoundClustersMod1);
+			hFelixClusterNumberAllMods->Fill(nFoundClustersAllMods);
+		
             while (NULL != (cand = static_cast<HParticleCand*>(iterParticleCand->Next()))) { //ParticleCandIter
 				
 	            if (cand->getChi2() > 0 && cand->getChi2() < 1000) {
@@ -644,9 +694,11 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 								
 									for (Int_t i=0; i<nOfStartHits; i++) { // loop over all start hits
 										
+										Float_t width = Start2CalObject->getWidth(i+1);
 										Float_t calTime = Start2CalObject->getTime(i+1);
 										Float_t time_diff_recalc = time_diff + startTime - calTime;
 										
+										hRpcTimeDiffVsWidth[startIndex-1]->Fill(width, time_diff_recalc);
 										hRpcTimeDifferenceVsStartStrip->Fill(startIndex, time_diff_recalc);
 										hRpcTimeDifferenceVsStartStripBigRange->Fill(startIndex, time_diff_recalc);
 										
@@ -783,6 +835,10 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			hMultiplicityPerModule->Write();
 			hMultiplicityPerModuleNoTimeLimit->Write();
+			hFelixClusterNumberMod0->Write();
+			hFelixClusterNumberMod1->Write();
+			hFelixClusterNumberAllMods->Write();
+			hStartVetoCorrelation->Write();
 			
 			hRpcTimeDifferenceVsStartStrip->Write();
 			hRpcTimeDifferenceVsStartStripBigRange->Write();
@@ -829,36 +885,40 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			
 			out->mkdir("2D hists for time walk");
-			//out->mkdir("1D hists for time walk fitting");
+			out->mkdir("1D hists for time walk fitting");
 				
 			for (Int_t i = 0; i<nChannels; i++) { 
 				
 				if (skipThisChannel(i+1)) continue;
 				
 				out->cd("2D hists for time walk");
+				hRpcTimeDiffVsWidth[i]->Write();
 				hTimeDiffVsWidth[i]->Write();
 				hTimeDiffVsWidthBigTimeRange[i]->Write();
 				
 				for (Int_t j = 0; j<nPointsForTimeWalk; j++) {
 					
-					//out->cd("1D hists for time walk fitting");
-					out->cd();
+					out->cd("1D hists for time walk fitting");
+					//out->cd();
 					hTimeDiffForTimeWalk[i][j]->Write();
 					hWidthForTimeWalk[i][j]->Write();
 				}
+				
+				
+				
+				
+				
+				
+				
+				
 			}
 			
 			for (Int_t i=0; i<6; i++) {
 			
 				//add sigma and chisquare if you wanna use this now
-				//right now this is not needed since fitting can be only done after merging files from the batch farm
-				
-			    //fillTimeAndPosOffsets(hXposOffsets[i], hXposDifference[i], nCells, out, Form("XposFits_sect%i", i+1));
-			    //fillTimeAndPosOffsets(hTimeOffsets[i], hTimeDifference[i], nCells, out, Form("TimeFits_sect%i", i+1));
-			
-				out->cd();
-			
-				hNegativeTracksOneFile[i]->Write();
+
+
+
 				hPionsBetaCutOneFile[i]->Write();
 				hPionsBananaCutOneFile[i]->Write();
 				hXposDifference[i]->Write();
@@ -880,5 +940,190 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 
 };
 
+class ChargeCalibrationRPC : public HReconstructor {
+
+	protected:
+	
+	    // pointer to outputfile
+	    TFile* out; 
+	    
+	    // settings 
+	    Bool_t fillHistograms = true;
+	   
+	    // histogram declarations
+	    TH2F* hLeftChargeVsCellNumber[6];
+	    TH2F* hRightChargeVsCellNumber[6];
+	    TH1F* hLeftChargeOffsets[6];
+	    TH1F* hRightChargeOffsets[6];
+	    
+	    // HADES stuff declarations
+	    HCategory* rpcCalCategory;
+	    HRpcCal* rpcCalObject;
+	    HEventHeader* eventHeader;
+	    HCategory* rpcHit;
+	    
+		//HCategory* rpcClus;   //
+		//HCategory* candCat; //
+		
+		//HParticleCand* cand;
+		//HRpcHit* rpchit;
+		//HRpcCluster* rpcclus;
+
+	public:
+	
+		//default constructor
+	    ChargeCalibrationRPC (const Text_t *name = "", const Text_t *title ="", TFile* outfile = NULL) : HReconstructor(name, title) { 
+	
+			out = outfile;
+			//out = new TFile(outfile,"RECREATE");
+	    
+	    }
+	
+		//destructor
+	    virtual ~ChargeCalibrationRPC () {
+	    }
+	
+	    Bool_t init() {
+			// this function is called once in the beginning
+			// create histograms or get pointer to param containers
+			// or data containers here. Tip: Create first your
+			// output file and and after that your histograms/ ntuples.
+			// In this way you make shure the object will end up in your
+		    // root file and not any other one.
+		
+		//rpcCalCategory = NULL;
+		rpcCalObject = NULL;
+		eventHeader = NULL;
+
+		rpcCalCategory = HCategoryManager::getCategory(catRpcCal);
+	    //rpcClus = HCategoryManager::getCategory(catRpcCluster);   //
+	    //candCat = HCategoryManager::getCategory(catParticleCand); //
+		//rpcHit = HCategoryManager::getCategory(catRpcHit);
+		
+		if(out) {
+				
+		   out->cd();
+		
+		// histogram definitions
+		
+				   
+			for (Int_t i=0; i<6; i++) { // loop over sectors
+			   
+				hLeftChargeVsCellNumber[i] = new TH2F(
+				Form("hLeftChargeVsCellNumber_sect%i", i+1),
+				Form("Left charge vs. cell number, sector %i; 32 #times module + cell; charge", i+1), 
+				nCells, loLimitCells, hiLimitCells, 300, -20.0, 30.0);
+				   
+				hRightChargeVsCellNumber[i] = new TH2F(
+				Form("hRightChargeVsCellNumber_sect%i", i+1), 
+				Form("Right charge vs. cell number, sector %i; 32 #times module + cell; charge", i+1), 
+				nCells, loLimitCells, hiLimitCells, 300, -20.0, 30.0);
+					   			   
+				hLeftChargeOffsets[i] = new TH1F(
+				Form("hLeftChargeOffsets_sect%i", i+1),
+				Form("Left charge offsets, sector %i; 32 #times module + cell; charge offset", i+1), 
+				nCells, loLimitCells, hiLimitCells);
+			   
+				hRightChargeOffsets[i] = new TH1F(
+				Form("hRightChargeOffsets_sect%i", i+1),
+				Form("Right charge offsets, sector %i; 32 #times module + cell; charge offset", i+1), 
+				nCells, loLimitCells, hiLimitCells);
+			}
+		}	
+			return kTRUE;
+	}
+    
+	    Bool_t reinit() {   
+			// this function is called for each file
+	        // after init()
+			// use this place if you need already initialized
+	        // containers
+			rpcCalCategory = HCategoryManager::getCategory(catRpcCal);
+		    //rpcClus = HCategoryManager::getCategory(catRpcCluster);   //
+		    //candCat = HCategoryManager::getCategory(catParticleCand); //
+			return kTRUE;
+	    }
+	
+	    Int_t execute() {   
+			
+			// this function is called once per event.
+			// if the function returns kSkipEvent the event
+			// will be skipped a. for all following tasks
+			// and b. not appear in output (hades eventLoop())
+			
+			// this is the part actually responsible for doing the hard work for us
+			// find appropriate variables and fill the histograms with them
+			
+	//		cout << "This is the 'execute' function from my FillHistos : HReconstructor class \n";
+			
+	// 		charge calibration		
+			
+			for(Int_t i = 0; i<rpcCalCategory->getEntries();i++) {
+	                    
+				rpcCalObject = (HRpcCal*) HCategoryManager::getObject(rpcCalObject,rpcCalCategory,i);
+	          
+	       	    if(!rpcCalObject) continue;
+	            	    
+			    Int_t cell   = rpcCalObject -> getCell();
+				Int_t sector = rpcCalObject -> getSector();
+	            Int_t column = rpcCalObject -> getColumn();
+	            Int_t index = 32*column+cell;
+			            
+			    Double_t leftCharge = rpcCalObject -> getLeftCharge();
+			    Double_t rightCharge = rpcCalObject -> getRightCharge();
+	
+			    if (leftCharge>-50 && leftCharge<50)
+					hLeftChargeVsCellNumber[sector] -> Fill(index,leftCharge);
+				if (rightCharge>-50 && rightCharge<50)
+					hRightChargeVsCellNumber[sector] -> Fill(index,rightCharge);
+			
+	//		    std::cout << Form("RPC charge debug: SEC%iCELL%iCOL%i Left = %f Right = %f \n", sector, cell, column, leftCharge, rightCharge);
+			
+			}
+		
+		return 0;
+			
+		}
+	
+	    Bool_t finalize() {   
+		
+		// this function is called once in the end of the
+		// runtime of the program. Save histograms to file
+		// etc. Tip: Change to your ROOT output file before
+		// writing our histograms. You might not be the only
+		// user of root files and the current directory could
+	        // the one from another user.
+		
+		std::cout << "Finalizing the ChargeCalibrationRPC task..." << endl;
+		
+			if(out) {
+				
+		       out->cd();
+		       
+		       // write histograms
+			   for (Int_t i=0; i<6; i++) {
+				   
+				   std::cout << "Getting offsets and saving histograms for sector " << i+1 <<endl;
+				   
+				    fillChargeOffsets(hLeftChargeOffsets[i], hLeftChargeVsCellNumber[i], nCells);
+				    fillChargeOffsets(hRightChargeOffsets[i], hRightChargeVsCellNumber[i], nCells);
+		
+					hRightChargeVsCellNumber[i]->Write();
+					hLeftChargeVsCellNumber[i]->Write();
+					hRightChargeOffsets[i]->Write();
+					hLeftChargeOffsets[i]->Write();
+		
+				}
+				
+			   //out->Save();
+		       //out->Close();
+		       
+			}
+	
+		return kTRUE;
+		
+	    }
+
+};
 
 #endif

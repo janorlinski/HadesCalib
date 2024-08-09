@@ -12,15 +12,15 @@ const TString inRootFile = "./params/allParam_feb24_gen0_16042024.root";
 //const TString chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control03.root";
 //const TString timeAndPosOffsetsFile = "";
 
-const Bool_t doCharge = true; 
-const Bool_t doTimeAndPos = false; 
+const Bool_t doCharge = false; 
+const Bool_t doTimeAndPos = true; 
 
 const Double_t vProp = 177.0; // propagation velocity for time/pos conversions
 
 void generateAsciiParFile () {
 	
-	TString date="18072024";
-	TString beam="cc";
+	TString date="09082024";
+	TString beam="auau";
 	
 	TString inAsciiFile = "";
 	TString newAsciiFile = "";
@@ -28,17 +28,17 @@ void generateAsciiParFile () {
 	TString timeAndPosOffsetsFile = "";
 	
 	if (beam=="cc") {
-		inAsciiFile = "RpcCalPar_cc_JanOrlinski_25062024.txt";
+		inAsciiFile = "RpcCalPar_cc_JanOrlinski_18072024.txt";
 		newAsciiFile = "RpcCalPar_cc_JanOrlinski_"+date+".txt";
-		chargeOffsetsFile = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "";
+		//chargeOffsetsFile = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
+		timeAndPosOffsetsFile = "TimeAndPos_039_Control06.root";
 	}
 	
 	else if (beam=="auau") {
-		inAsciiFile = "RpcCalPar_auau_JanOrlinski_25062024.txt";
+		inAsciiFile = "RpcCalPar_auau_JanOrlinski_18072024.txt";
 		newAsciiFile = "RpcCalPar_auau_JanOrlinski_"+date+".txt";
-		chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "";
+		//chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
+		timeAndPosOffsetsFile = "TimeAndPos_061_Control06.root";
 	}
 
 	Int_t runId = -1; //random runid from feb24 logbook, file be061234303

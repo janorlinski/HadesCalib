@@ -59,6 +59,9 @@ const Int_t refCh[4] = {11, 28, 42, 67}; //au+au
 const Float_t refWidthLo[2] = {widthLoLimit, widthLoLimit};
 const Float_t refWidthHi[2] = {widthHiLimit, widthHiLimit};
 
+const Float_t clusteringTimeWindow = 5.0; // ns
+const Float_t clusteringStripWindow = 16; // 16 strips difference
+
 Float_t findEvtStartTime () {
 	
 	
@@ -163,6 +166,9 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 
 	protected:
 	
+		//evt counter
+		Int_t evt;
+	
 	    // pointer to outputfile
 	    TFile* out;
 	   
@@ -180,20 +186,33 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	    // for start calibration	    
 	    TH2F* hMultiplicityPerModule;
 	    TH2F* hMultiplicityPerModuleNoTimeLimit;
+	    
+	    //cluster snumber per event
 	    TH1F* hFelixClusterNumberMod0;
 	    TH1F* hFelixClusterNumberMod1;
+	    TH1F* hFelixClusterNumberMod3;
 	    TH1F* hFelixClusterNumberAllMods;
+	  
+		//cluster size
+	    TH1F* hFelixClusterSizeMod0;
+	    TH1F* hFelixClusterSizeMod1;
+	    TH1F* hFelixClusterSizeMod3;
+	    TH1F* hFelixClusterSizeAllMods;
+	    
 	    //TH1F* hSimonClusterNumber;
 	    TH2F* hStartVetoCorrelation;
 		TH2F* hToTVsStartStrip;
 		TH2F* hAbsTimeVsStartStrip;
 	    TH2F* hTimeDiffVsChannel[nChannels];
+	    TH2F* hTimeDiffVsChannelLocalMaximaOnly[nChannels];
 	    TH2F* hTimeDiffVsWidth[nChannels];
 	    TH2F* hRpcTimeDiffVsWidth[nChannels];
+	    TH2F* hRpcTimeDiffVsWidthLocalMaximaOnly[nChannels];
 	    TH2F* hTimeDiffVsWidthBigTimeRange[nChannels];
 	    TH1F* hTimeDiffForTimeWalk[nChannels][nPointsForTimeWalk];
 	    TH1F* hWidthForTimeWalk[nChannels][nPointsForTimeWalk];
 		TH2F* hRpcTimeDifferenceVsStartStrip;
+		TH2F* hRpcTimeDifferenceVsStartStripLocalMaximaOnly;
 		TH2F* hRpcTimeDifferenceVsStartStripBigRange;
 		
 		// for rpc time/pos calibration
@@ -257,6 +276,8 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	    }
 	
 	    Bool_t init() {
+			
+			evt = 0;
 			// this function is called once in the beginning
 			// create histograms or get pointer to param containers
 			// or data containers here. Tip: Create first your
@@ -291,14 +312,23 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			hMultiplicityPerModule = new TH2F("hMultiplicityPerModule", "START multiplicity per module; module; mult", nModules, 0.5, nModules + 0.5, 15, 0, 15);
 			hMultiplicityPerModuleNoTimeLimit = new TH2F("hMultiplicityPerModuleNoTimeLimit", "START multiplicity per module NoTimeLimit; module; mult", nModules, 0.5, nModules + 0.5, 15, 0, 15);
-			hFelixClusterNumberMod0 = new TH1F("hFelixClusterNumberMod0", "Number of clusters per event, Felix' code, mod 0; Cluster size; START channel", 50, 0, 50);
-			hFelixClusterNumberMod1 = new TH1F("hFelixClusterNumberMod1", "Number of clusters per event, Felix' code, mod 1; Cluster size; START channel", 50, 0, 50);
-			hFelixClusterNumberAllMods = new TH1F("hFelixClusterNumberAllMods", "Number of clusters per event, Felix' code, all mods; Cluster size; START channel", 50, 0, 50);
+			
+			hFelixClusterNumberMod0 = new TH1F("hFelixClusterNumberMod0", "Number of clusters per event, Felix' code, mod 0; Cluster number;", 100, -0.5, 99.5);
+			hFelixClusterNumberMod1 = new TH1F("hFelixClusterNumberMod1", "Number of clusters per event, Felix' code, mod 1; Cluster number;", 100, -0.5, 99.5);
+			hFelixClusterNumberMod3 = new TH1F("hFelixClusterNumberMod3", "Number of clusters per event, Felix' code, mod 3; Cluster number;", 100, -0.5, 99.5);
+			hFelixClusterNumberAllMods = new TH1F("hFelixClusterNumberAllMods", "Number of clusters per event, Felix' code, all mods; Cluster number;", 200, -0.5, 199.5);
+			
+			hFelixClusterSizeMod0 = new TH1F("hFelixClusterSizeMod0", "Size of clusters, Felix' code, mod 0; Cluster size;", 100, -0.5, 99.5);
+			hFelixClusterSizeMod1 = new TH1F("hFelixClusterSizeMod1", "Size of clusters, Felix' code, mod 1; Cluster size;", 100, -0.5, 99.5);
+			hFelixClusterSizeMod3 = new TH1F("hFelixClusterSizeMod3", "Size of clusters, Felix' code, mod 1; Cluster size;", 100, -0.5, 99.5);
+			hFelixClusterSizeAllMods = new TH1F("hFelixClusterSizeAllMods", "Size of clusters, Felix' code, all mods; Cluster size;", 100, -0.5, 99.5);
+			
 			hStartVetoCorrelation = new TH2F("hStartVetoCorrelation", "Correlation between START and VETO hits; VETO channel; START channel", 20, 60.5, 80.5, 40, 0.5, 40.5);
 			   
 			hToTVsStartStrip = new TH2F("hToTVsStartStrip", "start ToT vs. start ch", nChannels, 0.5, nChannels + 0.5, 200, 0, 50);
 			hAbsTimeVsStartStrip = new TH2F("hAbsTimeVsStartStrip", "start abs time vs. start ch", nChannels, 0.5, nChannels + 0.5, 2000, -1000, 1000);
 			hRpcTimeDifferenceVsStartStrip = new TH2F("hRpcTimeDifferenceVsStartStrip", "tdiff rpc vs. start ch", nChannels, 0.5, nChannels + 0.5, 800, -20, 20);
+			hRpcTimeDifferenceVsStartStripLocalMaximaOnly = new TH2F("hRpcTimeDifferenceVsStartStripLocalMaximaOnly", "tdiff rpc vs. start ch LocalMaximaOnly", nChannels, 0.5, nChannels + 0.5, 800, -20, 20);
 			hRpcTimeDifferenceVsStartStripBigRange = new TH2F("hRpcTimeDifferenceVsStartStripAllTracks", "tdiff rpc big range vs. start ch", nChannels, 0.5, nChannels + 0.5, 1000, -50, 50);
 			
 			hNegativeTracksOneFile[6] = new TH1F("hNegativeTracksOneFile", "negative tracks vs start strip, all sectors", nChannels, 0.5, nChannels + 0.5);
@@ -351,11 +381,16 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				nCells, loLimitCells, hiLimitCells);
 			}
 			
-			for (Int_t i = 0; i<nChannels; i++) {
+			for (Int_t i = 0; i<nChannels; i++) { // loop over start channels
 				
 				hTimeDiffVsChannel[i] = new TH2F(
 				Form("hTimeDiffVsChannel_refCh%i", i+1), 
 				Form("Time difference vs. channels, reference channel = %i; %i #times module + channel; t diff", i+1, nChPerMod), 
+				nChannels, loLimitChannels, hiLimitChannels, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
+				
+				hTimeDiffVsChannelLocalMaximaOnly[i] = new TH2F(
+				Form("hTimeDiffVsChannelLocalMaximaOnly_refCh%i", i+1), 
+				Form("Time difference vs. channels, only local maxima, reference channel = %i; %i #times module + channel; t diff", i+1, nChPerMod), 
 				nChannels, loLimitChannels, hiLimitChannels, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
 		  
 				hTimeDiffVsWidth[i] = new TH2F(
@@ -366,6 +401,11 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				hRpcTimeDiffVsWidth[i] = new TH2F(
 				Form("hRpcTimeDiffVsWidth_%i", i+1), 
 				Form("histogram for time walk with RPC tdiffs, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
+				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
+		   
+				hRpcTimeDiffVsWidthLocalMaximaOnly[i] = new TH2F(
+				Form("hRpcTimeDiffVsWidthLocalMaximaOnly_%i", i+1), 
+				Form("histogram for time walk with RPC tdiffs LocalMaximaOnly, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
 				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
 		   
 				hTimeDiffVsWidthBigTimeRange[i] = new TH2F(
@@ -408,6 +448,9 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
     }
 
     Int_t execute() {   
+		
+		
+		// cout << "\n NEW EVENT! evt nmbr = " << evt << endl;
 		
 		// this function is called once per event.
 		// if the function returns kSkipEvent the event
@@ -456,6 +499,7 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	        
 	        std::vector<start_singlestriphit> allstriphitsperentryMod0;
 	        std::vector<start_singlestriphit> allstriphitsperentryMod1;
+	        std::vector<start_singlestriphit> allstriphitsperentryMod3;
 	        std::vector<start_singlestriphit> allstriphitsperentryAllMods;
 	        
 	        // START STUFF WITHOUT TRACKING
@@ -503,10 +547,13 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 					hToTVsStartStrip -> Fill(indexRef, widthRef);
 					hAbsTimeVsStartStrip -> Fill(indexRef, timeRef);
 					
+					//cout << "STart hit: module: " << moduleRef << ", time = " << timeRef << ", width = " << widthRef << "\n";
+					
 					start_singlestriphit currentsinglestriphit(moduleRef, indexRef, multiplicityRef, timeRef, widthRef);
 					allstriphitsperentryAllMods.push_back(currentsinglestriphit);
 					if (moduleRef == 0) allstriphitsperentryMod0.push_back(currentsinglestriphit);
 					if (moduleRef == 1) allstriphitsperentryMod1.push_back(currentsinglestriphit);
+					if (moduleRef == 3) allstriphitsperentryMod3.push_back(currentsinglestriphit);
 
 					if (timeRef >= loTimeLimitForMultiplicity && timeRef <= hiTimeLimitForMultiplicity) {
 						if (moduleRef == 0) totalMultiplicityMod0 += multiplicityRef;
@@ -593,20 +640,102 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			iterStart2Cal->Reset(); // return to 0 for the next loop
 			
 			//cluster finding
-			HStart2ClusterFinder clfinder;
-			clfinder.setclusterthresholds(1, 4, 10000); // ToArange,striprange,maxclustersizeinstrips
+			HStart2ClusterFinder clfinderAllMods;
+			HStart2ClusterFinder clfinderMod0;
+			HStart2ClusterFinder clfinderMod1;
+			HStart2ClusterFinder clfinderMod3;
+			clfinderAllMods.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
+			clfinderMod0.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
+			clfinderMod1.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
+			clfinderMod3.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
 			
-			std::vector<start_singlestriphit> allmaxstripsinclusterMod0 = clfinder.findcluster(allstriphitsperentryMod0);
-			std::vector<start_singlestriphit> allmaxstripsinclusterMod1 = clfinder.findcluster(allstriphitsperentryMod1);
-			std::vector<start_singlestriphit> allmaxstripsinclusterAllMods = clfinder.findcluster(allstriphitsperentryAllMods);
+			std::vector<start_singlestriphit> allmaxstripsinclusterMod0 = clfinderMod0.findcluster(allstriphitsperentryMod0);
+			std::vector<start_singlestriphit> allmaxstripsinclusterMod1 = clfinderMod1.findcluster(allstriphitsperentryMod1);
+			std::vector<start_singlestriphit> allmaxstripsinclusterMod3 = clfinderMod3.findcluster(allstriphitsperentryMod3);
+			std::vector<start_singlestriphit> allmaxstripsinclusterAllMods = clfinderAllMods.findcluster(allstriphitsperentryAllMods);
 			
 			Int_t nFoundClustersMod0 = allmaxstripsinclusterMod0.size();
 			Int_t nFoundClustersMod1 = allmaxstripsinclusterMod1.size();
+			Int_t nFoundClustersMod3 = allmaxstripsinclusterMod3.size();
 			Int_t nFoundClustersAllMods = allmaxstripsinclusterAllMods.size();
 			
 			hFelixClusterNumberMod0->Fill(nFoundClustersMod0);
 			hFelixClusterNumberMod1->Fill(nFoundClustersMod1);
+			hFelixClusterNumberMod3->Fill(nFoundClustersMod3);
 			hFelixClusterNumberAllMods->Fill(nFoundClustersAllMods);
+			
+			// cluster size analysis
+			// mod 0
+			for (Int_t i=0; i<nFoundClustersMod0; i++) {
+				
+				Int_t clusterSize = 0;
+				Float_t refToA = allmaxstripsinclusterMod0[i].getTOA();
+				
+				for (Int_t j=0; j<allstriphitsperentryMod0.size(); j++) {
+					if (fabs(allstriphitsperentryMod0[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
+				}
+				
+			hFelixClusterSizeMod0->Fill(clusterSize);
+				
+			}
+			
+			// mod 1
+			for (Int_t i=0; i<nFoundClustersMod1; i++) {
+				
+				Int_t clusterSize = 0;
+				Float_t refToA = allmaxstripsinclusterMod1[i].getTOA();
+				
+				for (Int_t j=0; j<allstriphitsperentryMod1.size(); j++) {
+					if (fabs(allstriphitsperentryMod1[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
+				}
+				
+			hFelixClusterSizeMod1->Fill(clusterSize);
+			}
+			
+			// mod 3
+			for (Int_t i=0; i<nFoundClustersMod3; i++) {
+				
+				Int_t clusterSize = 0;
+				Float_t refToA = allmaxstripsinclusterMod3[i].getTOA();
+				Int_t refChID = allmaxstripsinclusterMod3[i].getChannelID();
+				
+				for (Int_t j=0; j<allstriphitsperentryMod3.size(); j++) {
+					if (fabs(allstriphitsperentryMod3[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
+				}
+				
+				// for all local maxima in veto, get time differences to other local maxima in modules 0 and 1 
+				for (Int_t j=0; j<nFoundClustersMod0; j++) {
+					
+					Float_t testToA = allmaxstripsinclusterMod0[j].getTOA();
+					Int_t testChID = allmaxstripsinclusterMod0[j].getChannelID();
+					hTimeDiffVsChannelLocalMaximaOnly[refChID-1]->Fill(testChID, refToA-testToA);
+					
+				}
+				for (Int_t j=0; j<nFoundClustersMod1; j++) {
+					
+					Float_t testToA = allmaxstripsinclusterMod1[j].getTOA();
+					Int_t testChID = allmaxstripsinclusterMod1[j].getChannelID();
+					hTimeDiffVsChannelLocalMaximaOnly[refChID-1]->Fill(testChID, refToA-testToA);
+					
+				}
+				
+			hFelixClusterSizeMod3->Fill(clusterSize);
+			}
+			
+			// all mods
+			for (Int_t i=0; i<nFoundClustersAllMods; i++) {
+				
+				Int_t clusterSize = 0;
+				Float_t refToA = allmaxstripsinclusterAllMods[i].getTOA();
+				
+				for (Int_t j=0; j<allstriphitsperentryAllMods.size(); j++) {
+					if (fabs(allstriphitsperentryAllMods[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
+				}
+				
+			hFelixClusterSizeAllMods->Fill(clusterSize);
+			}
+			
+			
 		
             while (NULL != (cand = static_cast<HParticleCand*>(iterParticleCand->Next()))) { //ParticleCandIter
 				
@@ -715,6 +844,20 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 					    
 							} //end of start2cal iter
 							
+							//now iterate over local maxima of found clusters to compare the timing
+							
+							for (Int_t c=0; c<nFoundClustersAllMods; c++) {
+								if (cand->getCharge() < 0) {
+									Float_t calTime = allmaxstripsinclusterAllMods[c].getTOA();										
+									Float_t width = allmaxstripsinclusterAllMods[c].getTOT();
+									Int_t startIndex = allmaxstripsinclusterAllMods[c].getChannelID();
+									Float_t time_diff_recalc = time_diff + startTime - calTime;
+									
+									hRpcTimeDiffVsWidthLocalMaximaOnly[startIndex-1]->Fill(width, time_diff_recalc);
+									hRpcTimeDifferenceVsStartStripLocalMaximaOnly->Fill(startIndex, time_diff_recalc);
+								}
+							}
+							
 							if (cutPositive->IsInside(mom*chrg, beta) || 
 							cutNegative->IsInside(mom*chrg, beta)) hPionsBananaCutAllStripsOneFile->Fill(sector+1);
 							
@@ -723,6 +866,8 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				}
 			}
 		} 
+		
+	evt++;
 	
 	return 0;
 		
@@ -835,12 +980,22 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 			
 			hMultiplicityPerModule->Write();
 			hMultiplicityPerModuleNoTimeLimit->Write();
+			
 			hFelixClusterNumberMod0->Write();
 			hFelixClusterNumberMod1->Write();
+			hFelixClusterNumberMod3->Write();
+			
+			hFelixClusterSizeMod0->Write();
+			hFelixClusterSizeMod1->Write();
+			hFelixClusterSizeMod3->Write();
+			
+			hFelixClusterSizeAllMods->Write();
 			hFelixClusterNumberAllMods->Write();
+			
 			hStartVetoCorrelation->Write();
 			
 			hRpcTimeDifferenceVsStartStrip->Write();
+			hRpcTimeDifferenceVsStartStripLocalMaximaOnly->Write();
 			hRpcTimeDifferenceVsStartStripBigRange->Write();
 			
 			maxWidthPosOneFile->Write();
@@ -880,9 +1035,9 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				} 
 				
 				hTimeDiffVsChannel[i]->Write();
+				hTimeDiffVsChannelLocalMaximaOnly[i]->Write();
 				
 			}
-			
 			
 			out->mkdir("2D hists for time walk");
 			out->mkdir("1D hists for time walk fitting");
@@ -893,6 +1048,7 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 				
 				out->cd("2D hists for time walk");
 				hRpcTimeDiffVsWidth[i]->Write();
+				hRpcTimeDiffVsWidthLocalMaximaOnly[i]->Write();
 				hTimeDiffVsWidth[i]->Write();
 				hTimeDiffVsWidthBigTimeRange[i]->Write();
 				
@@ -903,14 +1059,6 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 					hTimeDiffForTimeWalk[i][j]->Write();
 					hWidthForTimeWalk[i][j]->Write();
 				}
-				
-				
-				
-				
-				
-				
-				
-				
 			}
 			
 			for (Int_t i=0; i<6; i++) {

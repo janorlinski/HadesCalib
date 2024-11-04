@@ -33,7 +33,7 @@ void getTimingMatrix () {
 	//TString day[nDays] = {"061"};
 	//TString timestamp = "00h00";
 	TString timestamp = "ALLDAY";
-	TString code = "Control06";
+	TString code = "Control07";
 	
 	//const Int_t nEvts = 160000;
 	
@@ -142,6 +142,7 @@ void getTimingMatrix () {
 			TH1F* pibeta = (TH1F*) fIn->Get("hPionsBetaCutOneFile");
 			TH1F* pibanana = (TH1F*) fIn->Get("hPionsBananaCutOneFile");
 			TH1F* pisect = (TH1F*) fIn->Get("hPionsBananaCutAllStripsOneFile");
+			TH2F* tdiffrpc = (TH2F*) fIn->Get("hRpcTimeDifferenceVsStartStripLocalMaximaOnly");
 			TH2F* mult = (TH2F*) fIn->Get("hMultiplicityPerModule");
 			TH1I* evt = (TH1I*) fIn->Get("evtCounter");
 			TH1F* mintime = (TH1F*) fIn->Get("minimumTimeOneFile");
@@ -212,7 +213,9 @@ void getTimingMatrix () {
 				// the lines below are copied from the original myClasses.h in order to move the fitting phase here
 				// this way fit optimizations can be done without resending all the data to the batchfarm
 				
-				TH1F* projection = (TH1F*) fIn->Get(Form("projection__ch%i", j));
+				
+				TH1F* projection = (TH1F*) tdiffrpc->ProjectionY(Form("projection__ch%i", j), j, j);
+				//TH1F* projection = (TH1F*) fIn->Get(Form("projection__ch%i", j));
 				TH1F* projWidth  = (TH1F*) totVsStrip->ProjectionY(Form("projWidth__ch%i", j), j, j);
 
 				Int_t nEntrOfSource = projection->GetEntries();

@@ -1,4 +1,5 @@
-#include "myIncludes.h"
+//#include "myIncludes.h"
+#include "myClasses.h"
 
 const TString inRootFile = "./params/allParam_feb24_gen0_16042024.root";
 //const TString inAsciiFile = "./analysisDST/feb24_dst_params_lineFit.txt";
@@ -19,8 +20,8 @@ const Double_t vProp = 177.0; // propagation velocity for time/pos conversions
 
 void generateAsciiParFile () {
 	
-	TString date="09082024";
-	TString beam="auau";
+	TString date="27082024";
+	TString beam="cc";
 	
 	TString inAsciiFile = "";
 	TString newAsciiFile = "";
@@ -28,17 +29,17 @@ void generateAsciiParFile () {
 	TString timeAndPosOffsetsFile = "";
 	
 	if (beam=="cc") {
-		inAsciiFile = "RpcCalPar_cc_JanOrlinski_18072024.txt";
+		inAsciiFile = "RpcCalPar_cc_JanOrlinski_25082024.txt";
 		newAsciiFile = "RpcCalPar_cc_JanOrlinski_"+date+".txt";
-		//chargeOffsetsFile = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "TimeAndPos_039_Control06.root";
+		chargeOffsetsFile = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
+		timeAndPosOffsetsFile = "TimeAndPos_039_Control08.root";
 	}
 	
 	else if (beam=="auau") {
-		inAsciiFile = "RpcCalPar_auau_JanOrlinski_18072024.txt";
+		inAsciiFile = "RpcCalPar_auau_JanOrlinski_25082024.txt";
 		newAsciiFile = "RpcCalPar_auau_JanOrlinski_"+date+".txt";
-		//chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "TimeAndPos_061_Control06.root";
+		chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
+		timeAndPosOffsetsFile = "TimeAndPos_061_Control08.root";
 	}
 
 	Int_t runId = -1; //random runid from feb24 logbook, file be061234303
@@ -79,6 +80,9 @@ void generateAsciiParFile () {
 	HRpcCalPar* pCalPar = (HRpcCalPar*) rtdb->getContainer("RpcCalPar");
 	rtdb->initContainers(runId);
 	
+	cout << "Blip! Beam is " << beam << endl;
+	gSystem->Sleep(2000);
+	
 	TFile* fin;
 	
 	/* CHARGE CALIBRATION */
@@ -88,6 +92,7 @@ void generateAsciiParFile () {
 	for (Int_t s=0; s<6 && doCharge; s++) { // loop over sectors
 		
 		cout << " >>> STATUS: Fetching charge offsets for sector " << s+1 << endl;
+		gSystem->Sleep(1000);
 		TH1F* hLeftChargeOffsets  = (TH1F*) fin->Get(Form("hLeftChargeOffsets_sect%i", s+1));
 		TH1F* hRightChargeOffsets = (TH1F*) fin->Get(Form("hRightChargeOffsets_sect%i", s+1));
 		
@@ -110,7 +115,7 @@ void generateAsciiParFile () {
 		}
 	}
 	
-	fin->Close();
+	//fin->Close();
 	
 	/* TIME AND POS CALIBRATION */
 	
@@ -119,6 +124,7 @@ void generateAsciiParFile () {
 	for (Int_t s=0; s<6 && doTimeAndPos; s++) { // loop over sectors
 			   			   
 		cout << " >>> STATUS: Fetching time&pos offsets for sector " << s+1 << endl;
+		gSystem->Sleep(1000);
 		TH1F* hXposOffsets  = (TH1F*) fin->Get(Form("hXposOffsets_sect%i", s+1));
 		TH1F* hTimeOffsets  = (TH1F*) fin->Get(Form("hTimeOffsets_sect%i", s+1));
 		

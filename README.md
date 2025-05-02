@@ -38,13 +38,14 @@ Please bear in mind that running raw files with trackng is very time consuming. 
 
 Other tools provided in this repository are:
 
- - FillRpcAndStartHistosWithTracking [task class inheriting from HReconstructor; fills all histograms necessary for further calibrations including those requiring tracking]
- - generateStart2CalPar.C [macro getting new offsets based on filled histos and generating a new ASCII file]
- - generateRpcCalPar.C [macro getting new offsets for charge and time calibration of RPC and generating a new ASCII file]
- - generateStart2CalRunPar.C [macro analyzing time walk histograms and the run-by-run parameter file]
- - getTimingMatrix.C [macro analyzing calibration status run-by-run (in reality: batch job by job, timing granularity depends on nFilesPerJob)]
-
-and some plotting tools. 
+ - HadesCalibIncludes.h [all includes, including useful functions, needed to compile the codes]
+ - JansClusterFinder.h [my cluster finder, see here: https://github.com/janorlinski/JansClusterFinder for more info]
+ - analysisDST.cc [example analysisDST.cc macro with my task included, PLEASE make sure that your analysisDST is up to date with Jochen]
+ - sendJobArrayScript.sh [example sendScript for the analysis, PLEASE make sure that your sendScript is up to date with Jochem]
+ - getChargeOffsetsFromBatchfarm.C [analyse results from the Fill...Histos... to obtain RPC charge offsets]
+ - getTimeAndPosOffsetsFromBatchfarm.C [analyse results from the Fill...Histos... to obtain RPC time and position offsets]
+ - generateAsciiParFile.C [generate the RpcCalPar ASCII file based on results from the two macros above]
+ - getTimingMatrix.C [macro analyzing calibration status run-by-run (in reality: batch job by job, timing granularity depends on nFilesPerJob in the sendScript)]
 
 ## Filling histos
 

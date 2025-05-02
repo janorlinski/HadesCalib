@@ -47,6 +47,8 @@ Other tools provided in this repository are:
  - generateAsciiParFile.C [generate the RpcCalPar ASCII file based on results from the two macros above]
  - getTimingMatrix.C [macro analyzing calibration status run-by-run (in reality: batch job by job, timing granularity depends on nFilesPerJob in the sendScript)]
 
+More tools, especially for the START, will be provided shortly.
+
 ## Filling histos
 
 The philosophy of my code is to _ALWAYS_ fill _ALL_ histos necessary for _ALL_ calibration activities. This is slightly wasteful, as more memory and operating time is used, than necessary. The benefit, however, is a significant reduction of the number of batchfarm jobs that must be sent (you can send just one analysis for all calibration activities). Keep in mind that this is the final status of the analysis after the feb24 run. All histograms that were in anyway useful to me were added to the task. This way, any reasonable request from the calibration team should be already included in the analysis. But, then again, they will always come up with something new that you never analysed...

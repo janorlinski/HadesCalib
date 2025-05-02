@@ -28,12 +28,17 @@ After you have a new ASCII file, you must still confirm that it actually does wh
 
 During/after your calibration you will be asked lots of questions about the quality, performance, calibration etc. of the detectors. Everytime I had to add a histogram to the analysis in order to answer a question, I just left it in the code for good. This way, you only have to send the code once per iteration of calibration and you always have some backup slides to answer weird questions. In consequence, the analysis is more resource-consuming. 
 
-## Tools
+## FillRpcAndStartHistosWithTracking
 
-Tools provided in this repository will be:
+This is the backbone of the calibration procedure. It is a task inheriting from HReconstructor which can be included directly into your `analysisDST` processing raw (HLD) files. It requires tracking for the START-RPC time differences. You can convert it to a "no-tracking" task by removing all section referring to the "HParticleCand". Also, in principle, it should work also on DST's, which will be much faster.
+
+Please bear in mind that running raw files with trackng is very time consuming. Take this into consideration when planning your workflow. I usually optimise my analysisDST in such a way, that it runs c.a. 8 hours and can be re-run overnight or within one working day. Think about whether you need a lot of statistics or whether you can run multiple jobs in parallel and merge them (this is possible if you don't plan on looking at each runID separately). This should allow you to run the entire analysis in 15 minutes, not 8 hours. Just think about the time needed to complete jobs when planning your workflow.
+
+## Other tools
+
+Other tools provided in this repository are:
 
  - FillRpcAndStartHistosWithTracking [task class inheriting from HReconstructor; fills all histograms necessary for further calibrations including those requiring tracking]
- - FillRpcAndStartHistosNoTracking [IN DEVELOPMENT task class inheriting from HReconstructor; fills a part of the calibration histograms, that doesn't require tracking (START module vs. module and RPC charge)]
  - generateStart2CalPar.C [macro getting new offsets based on filled histos and generating a new ASCII file]
  - generateRpcCalPar.C [macro getting new offsets for charge and time calibration of RPC and generating a new ASCII file]
  - generateStart2CalRunPar.C [macro analyzing time walk histograms and the run-by-run parameter file]
@@ -41,12 +46,8 @@ Tools provided in this repository will be:
 
 and some plotting tools. 
 
-Currently, however, this is not the case. All classes are found in myClasses.h and all method are in myIncludes. Other macros are currently more dispersed than I would expect, but you can more or less figure out what the code does based on its name.
-
 ## Filling histos
 
-The philosophy of my code is to _ALWAYS_ fill _ALL_ histos necessary for _ALL_ calibration activities. This is slightly wasteful, as more memory and operating time is used, than necessary. The benefit, however, is a significant reduction of the number of batchfarm jobs that must be sent (you can send just one analysis for all calibration activities). Keep in mind that this is the final status of the analysis after the feb24 run. All histograms that were in anyway useful were added to the task. This way, any reasonable request from the calibration team should be already included in the analysis. But, then again, they will always come up with something new that you never analysed...
-
-In general I recommend only using the `FillRpcAndStartHistosWithTracking` task. The tracking, of course, takes a lot of time. But, once again, the entire analysis is cleaner if only this task is sent. Including tracking only increases the capabilities of the code, there is no loss involved (except for the loss of time, of course). This way, every calibration analysis you send will have the same structure and full capabilities. 
+The philosophy of my code is to _ALWAYS_ fill _ALL_ histos necessary for _ALL_ calibration activities. This is slightly wasteful, as more memory and operating time is used, than necessary. The benefit, however, is a significant reduction of the number of batchfarm jobs that must be sent (you can send just one analysis for all calibration activities). Keep in mind that this is the final status of the analysis after the feb24 run. All histograms that were in anyway useful to me were added to the task. This way, any reasonable request from the calibration team should be already included in the analysis. But, then again, they will always come up with something new that you never analysed...
 
 

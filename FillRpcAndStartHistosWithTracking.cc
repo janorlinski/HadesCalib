@@ -11,14 +11,16 @@ FillRpcAndStartHistosWithTracking::~FillRpcAndStartHistosWithTracking () {
 	    }
 	
 Bool_t FillRpcAndStartHistosWithTracking::init() {
-			
-			evt = 0;
-			// this function is called once in the beginning
-			// create histograms or get pointer to param containers
-			// or data containers here. Tip: Create first your
-			// output file and and after that your histograms/ ntuples.
-			// In this way you make shure the object will end up in your
-		    // root file and not any other one.
+		
+		cout << "This is FillRpcAndStartHistosWithTracking init()" << endl;
+		
+		evt = 0;
+		// this function is called once in the beginning
+		// create histograms or get pointer to param containers
+		// or data containers here. Tip: Create first your
+		// output file and and after that your histograms/ ntuples.
+		// In this way you make shure the object will end up in your
+	    // root file and not any other one.
 		
 		eventHeader = NULL;
 	    Start2CalObject = NULL;
@@ -115,7 +117,7 @@ Bool_t FillRpcAndStartHistosWithTracking::init() {
 				hTimeDifferenceBigRange[i] = new TH2F(
 				Form("hTimeDifferenceBigRange_sect%i",i+1),
 				Form("ToA difference vs. cell number [big range], sector %i; 32 #times module + cell; t diff [ns]", i+1), 
-				nCells, loLimitCells, hiLimitCells, 800, -100, 100);
+				nCells, loLimitCells, hiLimitCells, 2000, -100, 100);
 				
 				hLeftChargeVsCellNumber[i] = new TH2F(
 				Form("hLeftChargeVsCellNumber_sect%i", i+1),
@@ -140,10 +142,20 @@ Bool_t FillRpcAndStartHistosWithTracking::init() {
 				Form("hTimeDiffVsChannelLocalMaximaOnly_refCh%i", i+1), 
 				Form("Time difference vs. channels, only local maxima, reference channel = %i; %i #times module + channel; t diff", i+1, nChPerMod), 
 				nChannels, loLimitChannels, hiLimitChannels, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
+				
+				hTimeDiffVsChannelLocalMaximaOnlyTimeCut[i] = new TH2F(
+				Form("hTimeDiffVsChannelLocalMaximaOnlyTimeCut_refCh%i", i+1), 
+				Form("Time difference vs. channels, only local maxima, cal time cut, reference channel = %i; %i #times module + channel; t diff", i+1, nChPerMod), 
+				nChannels, loLimitChannels, hiLimitChannels, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
 		  
 				hTimeDiffVsWidth[i] = new TH2F(
 				Form("hTimeDiffVsWidth_%i", i+1), 
 				Form("histogram for time walk, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
+				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
+		   
+				hTimeDiffVsWidthLocalMaximaOnly[i] = new TH2F(
+				Form("hTimeDiffVsWidthLocalMaximaOnly_%i", i+1), 
+				Form("histogram for time walk, only local maxima, ref%i, test%i; test width; t_{ref} - t_{test}", refCh[getRefModule(i+1)], i+1), 
 				nBinsForWidth, widthLoLimit, widthHiLimit, nBinsForTimeDiff, tDiffLoLimit, tDiffHiLimit);
 		   
 				hRpcTimeDiffVsWidth[i] = new TH2F(
@@ -204,7 +216,7 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 		Bool_t goodHitInMod1 = false;
 		//Bool_t goodHitInBoth = false;
 		
-		//cout << "\n NEW EVENT! evt nmbr = " << evt << endl;
+		//cout << "\n \n \n NEW EVENT! evt nmbr = " << evt << endl;
 		
 		// this function is called once per event.
 		// if the function returns kSkipEvent the event
@@ -250,13 +262,6 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 	        
 	        minimumTimeOneFile->Fill(findMinimumTime(3));
 	        
-	        // cluster finder initialization
-	        //cout << "Initializing cluster finders ... " << endl;
-	        
-	        std::vector<start_singlestriphit> allstriphitsperentryMod0;
-	        std::vector<start_singlestriphit> allstriphitsperentryMod1;
-	        std::vector<start_singlestriphit> allstriphitsperentryMod3;
-	        std::vector<start_singlestriphit> allstriphitsperentryAllMods;
 	        
 	        JansClusterFinder clfMod0(5.0);
 	        JansClusterFinder clfMod1(5.0);
@@ -266,7 +271,7 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 	        
 			Int_t nEntr = Start2CalCategory->getEntries();
 			
-	        //cout << nEntr << " entries in this event ... " << endl;
+	        // cout << nEntr << " Start2CalCategory entries in this event ... " << endl;
 			
 			Int_t totalMultiplicityMod0 = 0;
 			Int_t totalMultiplicityMod1 = 0;
@@ -321,12 +326,6 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 					// check and update bools for efficiency
 					if (moduleRef==3 && ((timeRef > -500. && timeRef < -50.) || (timeRef > 50. && timeRef < 500.))) goodHitInVeto = true;
 					
-					start_singlestriphit currentsinglestriphit(moduleRef, indexRef, multiplicityRef, timeRef, widthRef, i+1);
-					allstriphitsperentryAllMods.push_back(currentsinglestriphit);
-					if (moduleRef == 0) allstriphitsperentryMod0.push_back(currentsinglestriphit);
-					if (moduleRef == 1) allstriphitsperentryMod1.push_back(currentsinglestriphit);
-					if (moduleRef == 3) allstriphitsperentryMod3.push_back(currentsinglestriphit);
-					
 					if (moduleRef == 0) clfMod0.addHit(moduleRef, channelRef, widthRef, timeRef);
 					if (moduleRef == 1) clfMod1.addHit(moduleRef, channelRef, widthRef, timeRef);
 					if (moduleRef == 3) clfMod3.addHit(moduleRef, channelRef, widthRef, timeRef);
@@ -345,7 +344,7 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 					
 					if (j==i) continue;
 					
-					
+					//cout << "Entering j loop, j = " << j << endl;
 					
 					Start2CalObject = (HStart2Cal*) HCategoryManager::getObject(Start2CalObject,Start2CalCategory,j);
 					if(!Start2CalObject) continue;
@@ -419,112 +418,46 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 				
 			}
 			
+			//cout << "Resetting iterstart2cal..." << endl;
+			
 			iterStart2Cal->Reset(); // return to 0 for the next loop
-			
-			//cluster finding
-			HStart2ClusterFinder clfinderAllMods;
-			HStart2ClusterFinder clfinderMod0;
-			HStart2ClusterFinder clfinderMod1;
-			HStart2ClusterFinder clfinderMod3;
-			clfinderAllMods.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
-			clfinderMod0.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
-			clfinderMod1.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
-			clfinderMod3.setclusterthresholds(clusteringTimeWindow, clusteringStripWindow, 10000); // ToArange,striprange,maxclustersizeinstrips
-			
-			std::vector<start_singlestriphit> allmaxstripsinclusterMod0 = clfinderMod0.findcluster(allstriphitsperentryMod0);
-			std::vector<start_singlestriphit> allmaxstripsinclusterMod1 = clfinderMod1.findcluster(allstriphitsperentryMod1);
-			std::vector<start_singlestriphit> allmaxstripsinclusterMod3 = clfinderMod3.findcluster(allstriphitsperentryMod3);
-			std::vector<start_singlestriphit> allmaxstripsinclusterAllMods = clfinderAllMods.findcluster(allstriphitsperentryAllMods);
-			
-			Int_t nFoundClustersMod0 = allmaxstripsinclusterMod0.size();
-			Int_t nFoundClustersMod1 = allmaxstripsinclusterMod1.size();
-			Int_t nFoundClustersMod3 = allmaxstripsinclusterMod3.size();
-			Int_t nFoundClustersAllMods = allmaxstripsinclusterAllMods.size();
-			
-			hFelixClusterNumberMod0->Fill(nFoundClustersMod0);
-			hFelixClusterNumberMod1->Fill(nFoundClustersMod1);
-			hFelixClusterNumberMod3->Fill(nFoundClustersMod3);
-			hFelixClusterNumberAllMods->Fill(nFoundClustersAllMods);
 			
 			clfMod0.findClusters();
 			clfMod1.findClusters();
 			clfMod3.findClusters();
 			
-			// cluster size analysis - felix 'code
-			// mod 0
-			for (Int_t i=0; i<nFoundClustersMod0; i++) {
+			for (Int_t i=0; i<clfMod3.getNumberOfClusters(); i++) {
 				
-				Int_t clusterSize = 0;
-				Float_t refToA = allmaxstripsinclusterMod0[i].getTOA();
+				//Int_t clusterSize = 0;
+				Float_t refToA = clfMod3.getClusterTime(i);
+				Int_t refChID = 60 + clfMod3.getClusterStrip(i);
 				
-				for (Int_t j=0; j<allstriphitsperentryMod0.size(); j++) {
-					if (fabs(allstriphitsperentryMod0[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
-				}
-				
-			//cout << "FELIX_NEW cluster in mod" << allmaxstripsinclusterMod0[i].getModID() << "strip" << allmaxstripsinclusterMod0[i].getChannelID() << ", time = " << allmaxstripsinclusterMod0[i].getTOA() << ", width = " <<  allmaxstripsinclusterMod0[i].getTOT() << " and clustersize = " << clusterSize << endl;
-			hFelixClusterSizeMod0->Fill(clusterSize);
-				
-			}
-			
-			// mod 1
-			for (Int_t i=0; i<nFoundClustersMod1; i++) {
-				
-				Int_t clusterSize = 0;
-				Float_t refToA = allmaxstripsinclusterMod1[i].getTOA();
-				
-				for (Int_t j=0; j<allstriphitsperentryMod1.size(); j++) {
-					if (fabs(allstriphitsperentryMod1[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
-				}
-				
-			//cout << "FELIX_NEW cluster in mod" << allmaxstripsinclusterMod1[i].getModID() << "strip" << allmaxstripsinclusterMod1[i].getChannelID() << ", time = " << allmaxstripsinclusterMod1[i].getTOA() << ", width = " <<  allmaxstripsinclusterMod1[i].getTOT() << " and clustersize = " << clusterSize << endl;
-			hFelixClusterSizeMod1->Fill(clusterSize);
-			}
-			
-			// mod 3
-			for (Int_t i=0; i<nFoundClustersMod3; i++) {
-				
-				Int_t clusterSize = 0;
-				Float_t refToA = allmaxstripsinclusterMod3[i].getTOA();
-				Int_t refChID = allmaxstripsinclusterMod3[i].getChannelID();
-				
-				for (Int_t j=0; j<allstriphitsperentryMod3.size(); j++) {
-					if (fabs(allstriphitsperentryMod3[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
-				}
+				//cout << "analyzing clusters with reference index " << refChID << endl;
 				
 				// for all local maxima in veto, get time differences to other local maxima in modules 0 and 1 
-				for (Int_t j=0; j<nFoundClustersMod0; j++) {
+				for (Int_t j=0; j<clfMod0.getNumberOfClusters(); j++) {
 					
-					Float_t testToA = allmaxstripsinclusterMod0[j].getTOA();
-					Int_t testChID = allmaxstripsinclusterMod0[j].getChannelID();
+					Float_t testToA = clfMod0.getClusterTime(j);
+					Float_t testToT = clfMod0.getClusterTot(j);
+					Int_t testChID = clfMod0.getClusterStrip(j);
 					hTimeDiffVsChannelLocalMaximaOnly[refChID-1]->Fill(testChID, refToA-testToA);
+					if (abs(refToA)>50.0) hTimeDiffVsChannelLocalMaximaOnlyTimeCut[refChID-1]->Fill(testChID, refToA-testToA);
+					hTimeDiffVsWidthLocalMaximaOnly[testChID-1]->Fill(testToT, refToA-testToA);
 					
 				}
-				for (Int_t j=0; j<nFoundClustersMod1; j++) {
+				for (Int_t j=0; j<clfMod1.getNumberOfClusters(); j++) {
 					
-					Float_t testToA = allmaxstripsinclusterMod1[j].getTOA();
-					Int_t testChID = allmaxstripsinclusterMod1[j].getChannelID();
+					Float_t testToA = clfMod1.getClusterTime(j);
+					Float_t testToT = clfMod1.getClusterTot(j);
+					Int_t testChID = 20 + clfMod1.getClusterStrip(j);
 					hTimeDiffVsChannelLocalMaximaOnly[refChID-1]->Fill(testChID, refToA-testToA);
+					hTimeDiffVsWidthLocalMaximaOnly[testChID-1]->Fill(testToT, refToA-testToA);
 					
 				}
-				
-			//cout << "FELIX_NEW cluster in mod" << allmaxstripsinclusterMod3[i].getModID() << "strip" << allmaxstripsinclusterMod3[i].getChannelID() << ", time = " << allmaxstripsinclusterMod3[i].getTOA() << ", width = " <<  allmaxstripsinclusterMod3[i].getTOT() << " and clustersize = " << clusterSize << endl;
-			hFelixClusterSizeMod3->Fill(clusterSize);
 			}
-			
-			// all mods
-			for (Int_t i=0; i<nFoundClustersAllMods; i++) {
 				
-				Int_t clusterSize = 0;
-				Float_t refToA = allmaxstripsinclusterAllMods[i].getTOA();
-				
-				for (Int_t j=0; j<allstriphitsperentryAllMods.size(); j++) {
-					if (fabs(allstriphitsperentryAllMods[j].getTOA() - refToA) < clusteringTimeWindow) clusterSize++;
-				}
-				
-			hFelixClusterSizeAllMods->Fill(clusterSize);
-			}
-			
 			// cluster size analysis - jan's code
+			
 			for (Int_t i=0; i<clfMod0.getNumberOfClusters(); i++) {
 				//cout << "JAN cluster in mod" << clfMod0.getClusterModule(i) << "strip" << clfMod0.getClusterStrip(i) << ", time = " << clfMod0.getClusterTime(i) << ", width = " <<  clfMod0.getClusterTot(i) << " and clustersize = " << clfMod0.getClusterSize(i) << endl;
 				hJanClusterSizeMod0->Fill(clfMod0.getClusterSize(i));
@@ -537,6 +470,10 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 				//cout << "JAN cluster in mod" << clfMod3.getClusterModule(i) << "strip" << clfMod3.getClusterStrip(i) << ", time = " << clfMod3.getClusterTime(i) << ", width = " <<  clfMod3.getClusterTot(i) << " and clustersize = " << clfMod3.getClusterSize(i) << endl;
 				hJanClusterSizeMod3->Fill(clfMod3.getClusterSize(i));
 			}
+			
+			
+			//cout << "Beginning the rpc loop" << endl;
+			
 			for(Int_t i = 0; i<rpcCalCategory->getEntries();i++) {
 	                    
 				rpcCalObject = (HRpcCal*) HCategoryManager::getObject(rpcCalObject,rpcCalCategory,i);
@@ -593,12 +530,9 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 			  
 				    if (cand->getSystemUsed()==0){ 			
 						
-						//Int_t indexRPCHit = cand->getRpcInd();
-						//Int_t indexMetaHit = cand->getMetaInd();
 						Int_t metaCell = cand->getMetaCell(0);
 						Int_t metaModule = cand->getMetaModule(0);
 			            Int_t index = 32*metaModule + metaCell;
-			            
 			            
 						Float_t xdiff = cand->getRkMetaDx();
 						hXposDifference[sector]->Fill(index, xdiff);
@@ -616,19 +550,15 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 							tof_c  = beta / beta_c;
 							time_diff =  Tof * (1.0 - tof_c);
 			            
-									if (beta>=betaCut) { //impose beta cut, but only on the RPC plots
-										if (abs(time_diff)<5) hTimeDifference[sector]->Fill(index, time_diff);
-										hTimeDifferenceBigRange[sector]->Fill(index, time_diff);
-									}
-							
-							//cout << "track w/mom = " << mom << ", s" << sector << "m" << metaModule << "c" << metaCell << ", xdiff = " << xdiff << ", tdiff = " << time_diff << ". \n";	
-							//cout << "track w/mom = " << mom << ", RPCind=" << indexRPCHit << ", METAind=" << indexMetaHit << ", index=" << index <<
-							//"(s" << sector << "m" << metaModule << "c" << metaCell <<"), xdiff = " << xdiff << ", tdiff = " << time_diff << ". \n";	
+							if (beta>=betaCut && abs(time_diff)<8.0) hTimeDifference[sector]->Fill(index, time_diff);
+							hTimeDifferenceBigRange[sector]->Fill(index, time_diff);
 							
 							// THIS SECTION IS FOR RPC TDIFF vs. START STRIPE 
-							
-				            while (NULL != (Start2CalObject = static_cast<HStart2Cal*>(iterStart2Cal->Next()))) { // get all the start2cal objects
-							
+							for(Int_t is = 0; is<nEntr; is++) {
+				
+								Start2CalObject = (HStart2Cal*) HCategoryManager::getObject(Start2CalObject,Start2CalCategory,is);
+								if(!Start2CalObject) continue;
+									
 								Int_t nOfStartHits = Start2CalObject->getMultiplicity();
 								Int_t startIndex = Start2CalObject->getModule() * 20 + Start2CalObject->getStrip();
 							
@@ -672,11 +602,23 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 							
 							//now iterate over local maxima of found clusters to compare the timing
 							
-							for (Int_t c=0; c<nFoundClustersAllMods; c++) {
+							for (Int_t c=0; c<clfMod0.getNumberOfClusters(); c++) {
 								if (cand->getCharge() < 0) {
-									Float_t calTime = allmaxstripsinclusterAllMods[c].getTOA();										
-									Float_t width = allmaxstripsinclusterAllMods[c].getTOT();
-									Int_t startIndex = allmaxstripsinclusterAllMods[c].getChannelID();
+									
+									Float_t calTime = clfMod0.getClusterTime(c);										
+									Float_t width = clfMod0.getClusterTot(c);
+									Int_t startIndex = clfMod0.getClusterStrip(c);
+									Float_t time_diff_recalc = time_diff + startTime - calTime;
+									
+									hRpcTimeDiffVsWidthLocalMaximaOnly[startIndex-1]->Fill(width, time_diff_recalc);
+									hRpcTimeDifferenceVsStartStripLocalMaximaOnly->Fill(startIndex, time_diff_recalc);
+								}
+							}
+							for (Int_t c=0; c<clfMod1.getNumberOfClusters(); c++) {
+								if (cand->getCharge() < 0) {
+									Float_t calTime = clfMod1.getClusterTime(c);										
+									Float_t width = clfMod1.getClusterTot(c);
+									Int_t startIndex = 20 + clfMod1.getClusterStrip(c);
 									Float_t time_diff_recalc = time_diff + startTime - calTime;
 									
 									hRpcTimeDiffVsWidthLocalMaximaOnly[startIndex-1]->Fill(width, time_diff_recalc);
@@ -687,7 +629,7 @@ Int_t FillRpcAndStartHistosWithTracking::execute() {
 							if (cutPositive->IsInside(mom*chrg, beta) || 
 							cutNegative->IsInside(mom*chrg, beta)) hPionsBananaCutAllStripsOneFile->Fill(sector+1);
 							
-	                    }
+	                    } // end of min mom
 	                }
 				}
 			}
@@ -740,24 +682,9 @@ Bool_t FillRpcAndStartHistosWithTracking::finalize() {
 		hToTVsStartStrip->Write();
 		hAbsTimeVsStartStrip->Write();
 		
-		//hMultiplicityPerModule->Write();
-		//hMultiplicityPerModuleNoTimeLimit->Write();
-		
-		//hFelixClusterNumberMod0->Write();
-		//hFelixClusterNumberMod1->Write();
-		//hFelixClusterNumberMod3->Write();
-		
-		hFelixClusterSizeMod0->Write();
-		hFelixClusterSizeMod1->Write();
-		hFelixClusterSizeMod3->Write();
-		
 		hJanClusterSizeMod0->Write();
 		hJanClusterSizeMod1->Write();
 		hJanClusterSizeMod3->Write();
-		
-		//hFelixClusterSizeAllMods->Write();
-		//hFelixClusterNumberAllMods->Write();
-		
 		
 		hStartEfficiency->GetXaxis()->SetBinLabel(1, "All events");
 		hStartEfficiency->GetXaxis()->SetBinLabel(2, "Good VETO hit");
@@ -813,6 +740,7 @@ Bool_t FillRpcAndStartHistosWithTracking::finalize() {
 			
 			hTimeDiffVsChannel[i]->Write();
 			hTimeDiffVsChannelLocalMaximaOnly[i]->Write();
+			hTimeDiffVsChannelLocalMaximaOnlyTimeCut[i]->Write();
 			
 		}
 		
@@ -833,8 +761,11 @@ Bool_t FillRpcAndStartHistosWithTracking::finalize() {
 				
 				out->cd("1D hists for time walk fitting");
 				//out->cd();
-				hTimeDiffForTimeWalk[i][j]->Write();
-				hWidthForTimeWalk[i][j]->Write();
+				
+				//uncomment these lines if you plan on correcting the time-walk effect
+				
+				//hTimeDiffForTimeWalk[i][j]->Write();
+				//hWidthForTimeWalk[i][j]->Write();
 			}
 		}
 		

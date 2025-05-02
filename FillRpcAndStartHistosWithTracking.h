@@ -16,7 +16,7 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 	   
 		// settings
 	    Bool_t imposeBetaCut = false;
-	    const Double_t betaCut = 0.90;
+	    const Double_t betaCut = 0.80;
 	   
 	    // histogram declarations
 	    
@@ -59,7 +59,9 @@ class FillRpcAndStartHistosWithTracking : public HReconstructor {
 		TH2F* hAbsTimeVsStartStrip;
 	    TH2F* hTimeDiffVsChannel[nChannels];
 	    TH2F* hTimeDiffVsChannelLocalMaximaOnly[nChannels];
+	    TH2F* hTimeDiffVsChannelLocalMaximaOnlyTimeCut[nChannels];
 	    TH2F* hTimeDiffVsWidth[nChannels];
+	    TH2F* hTimeDiffVsWidthLocalMaximaOnly[nChannels];
 	    TH2F* hRpcTimeDiffVsWidth[nChannels];
 	    TH2F* hRpcTimeDiffVsWidthLocalMaximaOnly[nChannels];
 	    TH2F* hTimeDiffVsWidthBigTimeRange[nChannels];

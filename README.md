@@ -45,6 +45,11 @@ Other tools provided in this repository are:
  - getChargeOffsetsFromBatchfarm.C [analyse results from the Fill...Histos... to obtain RPC charge offsets]
  - getTimeAndPosOffsetsFromBatchfarm.C [analyse results from the Fill...Histos... to obtain RPC time and position offsets]
  - generateAsciiParFile.C [generate the RpcCalPar ASCII file based on results from the two macros above]
+ - getStartOffsetsFromBatchfarm.C [analyse results from the Fill...Histos... to obtain START time offsets]
+ - generateAsciiStartParFile.C [generate the Start2Calpar ASCII file based on results from the macro above]
+ - generateDummyStart2CalRunPar.C [generate a dummy start2calrunpar - it will initialise correctly, but contain only zeros]
+ - generateStart2CalRunPar.C [generate the Start2CalRunPar together with fitting the time walk functions, USE CAUTION - THIS IS LEGACY CODE]
+ - generateStart2CalRunParFromFile.C [obtain the TW corrections was taken over by S. Trelinski, this macro will let you generate the Start2CalRunPar ASCII file based on results provided by someone else]
  - getTimingMatrix.C [macro analyzing calibration status run-by-run (in reality: batch job by job, timing granularity depends on nFilesPerJob in the sendScript)]
 
 More tools, especially for the START, will be provided shortly.

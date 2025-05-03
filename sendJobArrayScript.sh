@@ -35,19 +35,20 @@ day=${1}
 timestamp=${2}
 code=${3}
 
-submmissionbase=/lustre/hades/user/${user}/sub/feb24/
+submmissionbase=/lustre/hades/user/${user}/sub/apr25/
 
 submissiondir=${submmissionbase}/${currentdir}
-    outputdir=/lustre/hades/user/${user}/feb24/output/rpcCalibRawFiles/${day}/${code}   # outputdir for files AND logFiles
+    outputdir=/lustre/hades/user/${user}/apr25/output/HadesCalib/${day}/${code}   # outputdir for files AND logFiles
 pathoutputlog=${outputdir}/logs     # protocol from batch farm for each file
 #    outputdir=/lustre/hades/user/${user}/flow/output/${generation}/${dataset}   # outputdir for files AND logFiles
 #pathoutputlog=/lustre/hades/user/${user}/flow/output/${generation}/${dataset}/logs     # protocol from batch farm for each file
 
 #nFilesPerJob=1                                                 # number of files to be analyzed by 1 job (default==1)
-nFilesPerJob=8                                                 # number of files to be analyzed by 1 job (default==1)
+#nFilesPerJob=8                                                 # number of files to be analyzed by 1 job (default==1)
 #nFilesPerJob=10                                                 # number of files to be analyzed by 1 job (default==1)
 #nFilesPerJob=12                                                 # number of files to be analyzed by 1 job (default==1)
-#nFilesPerJob=15                                                 # number of files to be analyzed by 1 job (default==1)
+nFilesPerJob=15                                                 # number of files to be analyzed by 1 job (default==1)
+#nFilesPerJob=18                                                 # number of files to be analyzed by 1 job (default==1)
 #nFilesPerJob=20                                                 # number of files to be analyzed by 1 job (default==1)
 #nFilesPerJob=40                                                 # number of files to be analyzed by 1 job (default==1)
 #nFilesPerJob=50                                                 # number of files to be analyzed by 1 job (default==1)
@@ -67,9 +68,10 @@ jobscript=${submissiondir}/jobArrayScript.sh     # exec script (full path, call 
 #par1=/lustre/hades/user/lchlad/flow/scripts/apr12/behruz_lib/defall.sh            # optional par1 : environment script
 
 #kCharged     
-filename=rpcCalibRawFiles_feb24_raw_${day}_${timestamp}_${code}                        # filename of log file if nFilesPerJob > 1 (partnumber will be appended)
+filename=HadesCalib_apr25_raw_${day}_${timestamp}_${code}                        # filename of log file if nFilesPerJob > 1 (partnumber will be appended)
 
-par1=/lustre/hades/user/jorlinsk/my-hydra/defall.sh       # optional par1 : environment script
+par1=/lustre/hades/user/hadesdst/svn/debian10/6.24.02/hydra2trunk/defall.sh
+       # optional par1 : environment script
 #par1=/lustre/hades/user/jorlinsk/defallNew-deb8.sh        # optional par1 : environment script
 #par1=/lustre/hades/user/jorlinsk/feb24/defallNew-deb8.sh            # optional par1 : environment script
 #par1=/lustre/hades/user/lchlad/flow/scripts/apr12/behruz_lib/defall_debian10.sh            # optional par1 : environment script
@@ -78,7 +80,7 @@ par1=/lustre/hades/user/jorlinsk/my-hydra/defall.sh       # optional par1 : envi
 #filename=${particle}_v204_PidOpt${4}_Precuts${5}_MomCorr${6}                         # filename of log file if nFilesPerJob > 1 (partnumber will be appended)
 #par1=/lustre/nyx/hades/user/lchlad/flow/scripts/apr12/behruz_root6_lib/defall.sh     # optional par1 : environment script
 
-par2=${submissiondir}/build/analysis                               # optional par2 : executable
+par2=${submissiondir}/build/analysisDST                               # optional par2 : executable
 par3=""                                                         # optional par3 : input file list
 par4=${outputdir}                                               # optional par4 : outputfile (part number will be appended (_num.root))
 par5=${4}                                                 # optional par5 : number of events
@@ -91,9 +93,10 @@ resources="--mem=2000 --time=0-8:00:00"
 #resources="--partition=debug --mem=4000 --time=0-0:10:00"                          
 #resources="--partition=debug --mem=2000 --time=0-0:2:00"                          
 
-jobarrayFile="jobarray_feb24_raw_${day}.dat"
+jobarrayFile="jobarray_apr25_${day}.dat"
                                                               
-filelist=./filelists/feb24_raw_day${day}_${timestamp}.list   # file list in local dir! not in submissiondir!!!
+#filelist=./filelists/feb24_raw_day${day}_${timestamp}.list   # file list in local dir! not in submissiondir!!!
+filelist=./lists/day_${day}.list   # file list in local dir! not in submissiondir!!!
 ######################################################################
 
 nFiles=$( cat $filelist | wc -l)

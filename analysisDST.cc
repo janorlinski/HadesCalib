@@ -84,18 +84,20 @@ using namespace std;
 // macros from JO
 #include "FillRpcAndStartHistosWithTracking.cc"
 
-Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t startEvt=0)
+Int_t analysisDST(TString inFile, TString outFile,Int_t nEvents=10000, Int_t startEvt=0)
 {
+	//10k event jobs start finishing around 21 minutes, at 15 filesPerJob the total completion time was c.a. 28 minutes
 	
-	TString outdir = "/lustre/hades/user/jorlinsk/feb24/dst/";
+	TString outdir = "/lustre/hades/user/jorlinsk/apr25/dst/";
 	
     new Hades;
+    gHades->setOutputLimit(20000000000); // 20GB
     gHades->setEmbeddingMode(0);
     TStopwatch timer;
     gHades->setTreeBufferSize(8000);
     gHades->makeCounter(100);
     HRuntimeDb *rtdb = gHades -> getRuntimeDb();
-    gHades->setBeamTimeID(HADES::kFeb24);
+    gHades->setBeamTimeID(HADES::kApr25);
     gHades->getSrcKeeper()->addSourceFile("analysisDST.cc");
     gHades->getSrcKeeper()->addSourceFile("treeFilter.h");
     gHades->getSrcKeeper()->addSourceFile("treeFilter_acceptedEvents.h");
@@ -105,6 +107,7 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     gHades->getSrcKeeper()->addSourceFile("HFilterEvents.h");
     gHades->getSrcKeeper()->addSourceFile("FillRpcAndStartHistosWithTracking.h");
     gHades->getSrcKeeper()->addSourceFile("FillRpcAndStartHistosWithTracking.cc");
+
 
 
     //-------------- Default Settings for the File names -----------------
@@ -124,36 +127,24 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     //######################## CONFIGURATION #############################
     printf("Setting configuration...+++\n");
 
-    TString asciiParFile     = "./RpcCalPar_auau_JanOrlinski_27082024.txt";  // HMdcDeDx2 + HMdcDeDx2Scale
-    //TString asciiParFile     = "./params/feb24_dst_params_07032024.txt";  // HMdcDeDx2 + HMdcDeDx2Scale
-    //TString asciiParFile     = "./params/feb24_dst_params_ofMod0_ofMod1_gRpc_rpcCal.txt";  // HMdcDeDx2 + HMdcDeDx2Scale
-    //TString asciiParFile     = "./params/feb24_dst_params.txt";  // HMdcDeDx2 + HMdcDeDx2Scale
+    TString asciiParFile     = "./params/apr25_dst_params.txt";  // HMdcDeDx2 + HMdcDeDx2Scale
 
-	cout << ">>>>>>>>> DAY: " << day << endl;
-
-    if(day < 41){
-		
-	//asciiParFile = "./params/feb24_dst_params_cc_calTime0again_rpcCal_09032024.txt";
-	//asciiParFile = "./params/feb24_dst_params_cc_calTime0again_07032024.txt";
-	asciiParFile = "./RpcCalPar_cc_JanOrlinski_27082024.txt";
-	//asciiParFile = "./params/feb24_dst_params_rpcCal_29022024.txt";
-	//asciiParFile = "./params/feb24_dst_params_cc.txt";
-
-	cout<<"INPUTFILE: (day "<<day<<") : "<<inFile.Data()<<endl;
-	cout<<"ASCII PARAMS TAKEN FROM: "<<asciiParFile.Data()<<endl;
-    }
-
-    TString rootParFile      = "./params/allParam_feb24_gen0_16042024.root";  // oracle no HMdcDeDx2Scale
+    //TString rootParFile      = "./allParam_feb24_gen0_11042024.root";  // oracle no HMdcDeDx2Scale
+    //TString rootParFile      = "./allParam_feb24_gen0_14042024.root";  // oracle no HMdcDeDx2Scale
+    //TString rootParFile      = "./allParam_feb24_gen0_16042024.root";  // oracle no HMdcDeDx2Scale
+    TString rootParFile      = "./params/allParam_feb24_gen1_22042025.root";  // oracle no HMdcDeDx2Scale
     //TString paramSource      = "oracle,ascii"; // root, ascii, oracle
     TString paramSource      = "ascii,root"; // root, ascii, oracle
 
-    TString outFileSuffix    = "_dst_feb24.root";
+    TString outFileSuffix    = "_dst_apr25.root";
 
-    TString beamtime         = "feb24";
-    TString paramrelease     = "FEB24_v0b";  // now,
+    TString beamtime         = "apr25";
+    TString paramrelease     = "FEB24_v0g";  // now,
+    //TString paramrelease     = "now";  // now,
 
-    //Int_t  refId             = 444571079; //first in root par
-    Int_t  refId             = -1; //first in root par
+    //Int_t  refId             = 44457107fff9; //first in root par
+    //Int_t  refId             = -1; //first in root par
+    Int_t  refId             = 509170365;//444571079;
     Bool_t kParamFile        = kFALSE;
     Bool_t doExtendedFit     = kFALSE; // switch on/off fit for initial params of segment fitter (10 x slower!)
     Bool_t doStartCorrection = kTRUE;  // kTRUE (default)=  use run by run start corrections
@@ -163,15 +154,14 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     Bool_t doMetaMatchScale  = kTRUE;
     Bool_t useWireStat       = kFALSE; // online!
     Float_t metaScale        = 2; // apr12: 1.5
-    Bool_t doTree            = kFALSE;
+    Bool_t doTree            = kTRUE;
     //####################################################################
     //####################################################################
 
 
     //-------------- Default Settings for the File names -----------------
     TString outDir   = Form("%s",baseDir.Data());
-    //TString outDirQA = outDir+"qa/";
-    TString outDirQA; //modified by Jan - i don't want QA
+    TString outDirQA = outDir+"qa/";
 
     if(gSystem->AccessPathName(outDir.Data()) != 0){
 	cout<<"Creating output dir :"<<outDir.Data()<<endl;
@@ -202,8 +192,8 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 	catRich700Raw,
         //catRichDirClus, catRichHitHdr, 
         //catRichHit, catRichCal,
-	catMdcRaw,
-	catMdcCal1, //changed
+	//catMdcRaw,
+	//catMdcCal1, //changed
 	catMdcCal2,catMdcClusInf,catMdcHit,
 	catMdcSeg,  //changed
 	catMdcTrkCand,catMdcRawEventHeader,
@@ -233,7 +223,8 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 	catRich700Raw, //catRichDirClus,
 	catRichHitHdr,
 	//catRichHit, catRichCal,
-	catMdcRaw, catMdcCal1,catMdcCal2,catMdcClusInf, catMdcHit,
+	//catMdcRaw, catMdcCal1,
+	catMdcCal2,catMdcClusInf, catMdcHit,
 	catMdcSeg, catMdcTrkCand, catMdcRawEventHeader,
 	catEmcRaw,  catEmcCalQA,
         //catEmcCal, catEmcCluster,
@@ -243,7 +234,7 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 	catRKTrackB, catSplineTrack,
 	catMetaMatch,
 	//catParticleCandidate, catParticleEvtInfo, catParticleMdc,
-	//catWallRaw, // commented by J.O. 21-03-2024
+	catWallRaw,
 	catWallOneHit, catWallCal,
 	catStart2Raw //catStart2Cal, catStart2Hit,
 	// catTBoxChan
@@ -309,7 +300,7 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 	    gSystem->Exec(Form("rm -f %s.log" ,paramfilename.Data()));
 	}
 
-	if (!rtdb->makeParamFile(Form("%s.root",paramfilename.Data()),beamtime.Data(),"01-OCT-2023","02-APR-2024")) {
+	if (!rtdb->makeParamFile(Form("%s.root",paramfilename.Data()),beamtime.Data(),"24-JAN-2024","20-MAR-2024")) {
 	    delete gHades;
 	    exit(1);
 	}
@@ -331,22 +322,22 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 
 
     HMdcSetup*   mysetup    = (HMdcSetup*)  rtdb->getContainer("MdcSetup");
-    HEmcGeomPar* emcgeompar = (HEmcGeomPar*)rtdb->getContainer("EmcGeomPar");
-    HMagnetPar*  magnetpar  = (HMagnetPar*) rtdb->getContainer("MagnetPar");
+    //HEmcGeomPar* emcgeompar = (HEmcGeomPar*)rtdb->getContainer("EmcGeomPar");
+    //HMagnetPar*  magnetpar  = (HMagnetPar*) rtdb->getContainer("MagnetPar");
 
 
     HMdcDeDx2Scale* mdcdedxscale = (HMdcDeDx2Scale*)rtdb->getContainer("MdcDeDx2Scale");
     rtdb->initContainers(refId);
 
     mysetup     ->setStatic();
-    emcgeompar  ->setStatic();
+    //emcgeompar  ->setStatic();
     mdcdedxscale->setStatic();
-    magnetpar   ->setStatic();
+    //magnetpar   ->setStatic();
 
 
     //magnetpar->setCurrent(0);  // FIELD OFF
-    magnetpar->setCurrent(1850);  // C+C
-    magnetpar->printParams();
+    //magnetpar->setCurrent(1850);  // C+C
+    //magnetpar->printParams();
 
     mysetup->getMdcCommonSet()->setIsSimulation(0);                 // sim=1, real =0
     mysetup->getMdcCommonSet()->setAnalysisLevel(4);                // fit=4
@@ -357,6 +348,7 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     mysetup->getMdc12FitSet()->setMdc12FitSet(2,1,0,kFALSE,kFALSE); // tuned fitter, seg
 
 
+    //HTask *startTasks         = startTaskSet       ->make("real","nostarthit"); // changed
     HTask *startTasks         = startTaskSet       ->make("real","");
     HTask *richTasks          = richTaskSet        ->make("real","");
     HTask *tofTasks           = tofTaskSet         ->make("real","");
@@ -390,7 +382,6 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 
     HTask *mdcTasks           = mdcTaskSet         ->make("rtdb","");
     HMdcCalibrater1* calibrater =  mdcTaskSet->getCalibrater1();
-    //calibrater->setGlobalOffset(120,120,120,120);  // TEST: REVOVE THIS FOR FINAL
 
     //----------------SPLINE and RUNGE TACKING----------------------------------------
     HSplineTaskSet         *splineTaskSet       = new HSplineTaskSet("","");
@@ -443,11 +434,6 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     masterTaskSet->add(pParticleCleaner);
     masterTaskSet->add(pParticleVertexFind); // run after track cleaning
     masterTaskSet->add(pParticleEvtInfo);
-    //masterTaskSet->add(new HParticleT0Reco("T0","T0",beamtime));
-
-    //masterTaskSet->add(pParticleCleanerSecond); // feb22: uses iTof
-
-	// add JO's rpc calib task
 
     TFile *out = new TFile(outFile, "RECREATE");	
     //TFile *out = new TFile("/lustre/hades/user/jorlinsk/feb24/rpcCalibRawFiles/outRpcAndStartTasks_cc_calTime0again.root", "RECREATE");	
@@ -455,6 +441,10 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
     FillRpcAndStartHistosWithTracking* JanHadesCalibTask = new FillRpcAndStartHistosWithTracking("tcalibrpc", "tcalibrpc", inFile, out);
     
     masterTaskSet->add(JanHadesCalibTask);	
+    //masterTaskSet->add(new HParticleT0Reco("T0","T0",beamtime));
+
+    //masterTaskSet->add(pParticleCleanerSecond); // feb22: uses iTof
+
 
     //--------------------------------------------------------------------
     // Filtering part
@@ -530,8 +520,8 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 
     cout<<"--Input file      : "<<inFile  <<endl;
     cout<<"--QA directory is : "<<outDirQA<<endl;
-    cout<<"--OutputDst file is  : "<<outFileDst <<endl;
-    cout<<"--Output file is  : "<<outFile <<endl;
+    cout<<"--DST Output file is  : "<<outFileDst <<endl;
+    cout<<"--Calib Output file is  : "<<outFile <<endl;
 
     printf("Real time: %f\n",timer.RealTime());
     printf("Cpu time: %f\n",timer.CpuTime());
@@ -539,8 +529,6 @@ Int_t analysisDST(TString inFile, TString outFile, Int_t nEvents=100000, Int_t s
 
     if(kParamFile) rtdb->saveOutput();
 
-	out->Save();
-	out->Close();
     delete gHades;
     timer.Stop();
 

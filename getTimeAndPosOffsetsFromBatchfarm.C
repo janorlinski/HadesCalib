@@ -1,18 +1,12 @@
-#include "myClasses.h"
-//#include "../myIncludes.h"
+#include "HadesCalibIncludes.h"
 
 void getTimeAndPosOffsetsFromBatchfarm () {
 	
-	Bool_t manualOffsetAdjustmentsCC = true;
-	Bool_t manualOffsetAdjustmentsAuAu = false;
+	Bool_t manualOffsetAdjustmentsAuAu = kFALSE;
 
-	TString inFilePath = "~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/061/Control08/rpcCalibRawFiles_feb24_raw_061_ALLDAY_Control08.root";
-	//TString inFilePath = "~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/039/Control08/rpcCalibRawFiles_feb24_raw_039_ALLDAY_Control08.root";
-	//TString inFilePath = "~/lustre/hades/user/jorlinsk/feb24/output/rpcCalib/TimeAndPosCalib/039/TimeAndPosCalib_feb24_dst_039_runA.root";
-	//TString inFilePath = "outRpcTask_after_0k-50k.root";
-	//TString outFilePath = "TimeAndPos_feb24_dst_039_runA.root";
-	TString outFilePath = "TimeAndPos_061_Control08.root";
-	//TString outFilePath = "TimeAndPos_061_Control08.root";
+	TString inFilePath = "~/lustre/hades/user/jorlinsk/apr25/output/HadesCalib/116/afterStart/HadesCalib_apr25_raw_116_allday_afterStart.root";
+	//TString inFilePath = "~/lustre/hades/user/jorlinsk/apr25/output/HadesCalib/116/afterStartLargeStat/HadesCalib_apr25_raw_116_allday_afterStartLargeStat.root";
+	TString outFilePath = "TimeAndPos_116_afterStart.root";
 	
 	TFile* inFile = new TFile (inFilePath, "READ");
 	TFile* outFile = new TFile (outFilePath, "RECREATE");
@@ -21,6 +15,7 @@ void getTimeAndPosOffsetsFromBatchfarm () {
 
 	TH2F* hXposDifference[6];
 	TH2F* hTimeDifference[6];
+	TH2F* hRpcTimeDifferenceVsStartStripLocalMaximaOnly; // rpc time diff vs. start strip for the normalized plot 
 	
 	TH1F* hXposOffsets[6];
 	TH1F* hTimeOffsets[6];
@@ -63,6 +58,9 @@ void getTimeAndPosOffsetsFromBatchfarm () {
 		Form("Time fit chi square, sector %i; 32 #times module + cell", i+1), 
 		nCells, loLimitCells, hiLimitCells);
 	}
+	
+	hRpcTimeDifferenceVsStartStripLocalMaximaOnly = (TH2F*) inFile->Get("hRpcTimeDifferenceVsStartStripLocalMaximaOnly");
+	normalizeBinsX(hRpcTimeDifferenceVsStartStripLocalMaximaOnly);
 		
 	for (Int_t i=0; i<6; i++) {
 				   
@@ -71,38 +69,21 @@ void getTimeAndPosOffsetsFromBatchfarm () {
 				   
 		std::cout << "Getting offsets and saving histograms for sector " << i+1 <<endl;
 	
-	    fillPosOffsets(hXposOffsets[i], hXposFitSigma[i], hXposFitChiSquare[i], hXposDifference[i], 20.0, outFile, Form("XposFits_sect%i", i+1));
-	    fillTimeOffsets(hTimeOffsets[i], hTimeFitSigma[i], hTimeFitChiSquare[i], hTimeDifference[i], 0.25, outFile, Form("TimeFits_sect%i", i+1));
+	    fillPosOffsets(hXposOffsets[i], hXposFitSigma[i], hXposFitChiSquare[i], hXposDifference[i], 35.0, outFile, Form("XposFits_sect%i", i+1));
+		//fillTimeOffsetsAdvanced(hTimeOffsets[i], hTimeFitSigma[i], hTimeFitChiSquare[i], hTimeDifference[i], 0.5, outFile, Form("TimeFits_sect%i", i+1));
+	    fillTimeOffsetsDetailed(hTimeOffsets[i], hTimeFitSigma[i], hTimeFitChiSquare[i], hTimeDifference[i], outFile, Form("TimeFits_sect%i", i+1));
 	
 	}
 	
-	if (manualOffsetAdjustmentsCC) {
-		
-		hTimeOffsets[0]->SetBinContent(9, 0.1);
-		hTimeOffsets[0]->SetBinContent(70, 0.5);
-		hTimeOffsets[0]->SetBinContent(152, 0.2);
-		
-		hTimeOffsets[1]->SetBinContent(26, 0.2);
-		hTimeOffsets[1]->SetBinContent(78, 0.1);
-		hTimeOffsets[1]->SetBinContent(107, 0.0);
-		
-		hTimeOffsets[2]->SetBinContent(7, -7.8);
-		hTimeOffsets[2]->SetBinContent(148, 0.1);
-		
-		hTimeOffsets[3]->SetBinContent(25, 0.7);
-		hTimeOffsets[3]->SetBinContent(156, -8.6);
-		
-		hTimeOffsets[4]->SetBinContent(83, 0.2);
-		hTimeOffsets[4]->SetBinContent(128, 0.3);
-		
-		hTimeOffsets[5]->SetBinContent(76, 0.1);
-		hTimeOffsets[5]->SetBinContent(156, 0.25);
+	if (manualOffsetAdjustmentsAuAu) {
 		
 	}
+	
+	outFile->cd();
+	hRpcTimeDifferenceVsStartStripLocalMaximaOnly->Write();
 	
 	for (Int_t i=0; i<6; i++) {
 		
-		outFile->cd();
 	
 		hXposDifference[i]->Write();
 		hTimeDifference[i]->Write();
@@ -128,8 +109,8 @@ void getTimeAndPosOffsetsFromBatchfarm () {
 		hXposOffsets[i]->SetMarkerStyle(20);
 		hXposOffsets[i]->Draw("same P");
 		//cP[i]->Write();
-		if (i==0) cP[i]->Print("timeAndPosRes061.pdf(");
-		else cP[i]->Print("timeAndPosRes061.pdf");
+		if (i==0) cP[i]->Print("timeAndPosRes116.pdf(");
+		else cP[i]->Print("timeAndPosRes116.pdf");
 		
 	}
 	
@@ -142,8 +123,8 @@ void getTimeAndPosOffsetsFromBatchfarm () {
 		hTimeOffsets[i]->SetMarkerStyle(20);
 		hTimeOffsets[i]->Draw("same P");
 		//cT[i]->Write();
-		if (i!=5) cT[i]->Print("timeAndPosRes061.pdf");
-		else if (i==5)  cT[i]->Print("timeAndPosRes061.pdf)");
+		if (i!=5) cT[i]->Print("timeAndPosRes116.pdf");
+		else if (i==5)  cT[i]->Print("timeAndPosRes116.pdf)");
 		
 	}
 		

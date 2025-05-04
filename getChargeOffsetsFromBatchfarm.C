@@ -1,29 +1,17 @@
-#include "myClasses.h"
+#include "HadesCalibIncludes.h"
+//#include "myClasses.h"
 //#include "../myIncludes.h"
 
 void getChargeOffsetsFromBatchfarm () {
 	
-	const Bool_t manualAdjustmentsCC = kFALSE;
-	const Bool_t manualAdjustmentsAuAu = kTRUE;
-	
-	if (manualAdjustmentsCC && manualAdjustmentsAuAu) {
-		cout << "ERROR! Cannot use manual adjustments for both beamtimes at the same time!" << endl;
-		return;
-	}
+	const Bool_t manualAdjustmentsAuAu = kFALSE;
 	
     gStyle->SetPadBottomMargin(0.15);
     gStyle->SetPadRightMargin(0.15);
 	gStyle->SetOptStat(0);
 
-	//TString inFilePath = "~/lustre/hades/user/jorlinsk/feb22/output/rpcCalib/ChargeCalib/042/ChargeCalib_feb22_raw_042_ALL.root";
-	//TString inFilePath = "~/lustre/hades/user/jorlinsk/feb22/output/rpcCalib/TestParameters/042/TestParameters_feb22_raw_042_ALL.root";
-	//TString inFilePath = "~/lustre/hades/user/jorlinsk/feb24/output/rpcCalib/ChargeCalib/061/ChargeCalib_feb24_raw_061_ALLDAY_runA.root";
-	//TString inFilePath = "~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/061/Control03/rpcCalibRawFiles_feb24_raw_061_ALLDAY_Control03.root";
-	TString inFilePath = "~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/061/Control05/rpcCalibRawFiles_feb24_raw_061_ALLDAY_Control05.root";
-	//TString inFilePath = "~/lustre2/hades/user/jorlinsk/feb24/output/rpcCalibRawFiles/039/Control05/rpcCalibRawFiles_feb24_raw_039_ALLDAY_Control05.root";
-	//TString outFilePath = "ChargeCalib_feb22_raw_042_ALL.root";
-	TString outFilePath = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
-	//TString outFilePath = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
+	TString inFilePath = "~/lustre/hades/user/jorlinsk/apr25/output/HadesCalib/116/afterStartLargeStat/HadesCalib_apr25_raw_116_allday_afterStartLargeStat.root";
+	TString outFilePath = "ChargeCalib_apr25_raw_116_ALLDAY_afterStartLargeStat.root";
 	
 	cout << " \n";
 	cout << " \n";
@@ -31,7 +19,6 @@ void getChargeOffsetsFromBatchfarm () {
 	cout << " >>>  STATUS  <<< \n";
 	cout << "  inFile: " << inFilePath << "\n";
 	cout << " outFile: " << outFilePath << "\n";
-	cout << " manual adjustments of offsets for CC is: " << manualAdjustmentsCC << "\n";
 	cout << " manual adjustments of offsets for AuAu is: " << manualAdjustmentsAuAu << "\n";
 	cout << " \n";
 	gSystem->Sleep(2000);
@@ -77,27 +64,12 @@ void getChargeOffsetsFromBatchfarm () {
 		fillChargeOffsetsAdvanced(hLeftChargeOffsets[i], hLeftChargeVsCellNumber[i], threshFrac, diffFraction, nConsBins, nCycles);
 		fillChargeOffsetsAdvanced(hRightChargeOffsets[i], hRightChargeVsCellNumber[i], threshFrac, diffFraction, nConsBins, nCycles);
 		
-		// manual adustments for c+c
-		// do them here so that they are included in control plots
-		if (manualAdjustmentsCC) {
-			hLeftChargeOffsets[2]->SetBinContent(44, -1.0);
-			hLeftChargeOffsets[5]->SetBinContent(10, -0.0);
-			hLeftChargeOffsets[5]->SetBinContent(11, -1.8);
-			hRightChargeOffsets[2]->SetBinContent(19, -1.0);
-			hRightChargeOffsets[2]->SetBinContent(164, 0.0);
-			hRightChargeOffsets[2]->SetBinContent(165, 0.0);
-			hRightChargeOffsets[2]->SetBinContent(166, -0.8);
-			hRightChargeOffsets[5]->SetBinContent(42, 0.0);
-			hRightChargeOffsets[5]->SetBinContent(133, 0.0);
-			hRightChargeOffsets[5]->SetBinContent(134, -0.5);
-			hRightChargeOffsets[5]->SetBinContent(171, 0.0);
-		}
 		
 		
 		// manual adjustments for au+au
 		if (manualAdjustmentsAuAu) {
-			hLeftChargeOffsets[2]->SetBinContent(83, -1.3);
 		}
+		
 		hRightChargeVsCellNumber[i]->Write();
 		hLeftChargeVsCellNumber[i]->Write();
 		hRightChargeOffsets[i]->Write();
@@ -116,8 +88,8 @@ void getChargeOffsetsFromBatchfarm () {
 		hLeftChargeVsCellNumber[i]->Draw("colz");
 		hLeftChargeOffsets[i]->Draw("same");
 		cL[i]->Write();
-		if (i==0) cL[i]->Print("chargeRes061.pdf(");
-		else cL[i]->Print("chargeRes061.pdf");
+		if (i==0) cL[i]->Print("chargeRes116.pdf(");
+		else cL[i]->Print("chargeRes116.pdf");
 		
 	}
 		
@@ -130,8 +102,8 @@ void getChargeOffsetsFromBatchfarm () {
 		hRightChargeVsCellNumber[i]->Draw("colz");
 		hRightChargeOffsets[i]->Draw("same");
 		cR[i]->Write();
-		if (i==5) cR[i]->Print("chargeRes061.pdf)");
-		else cR[i]->Print("chargeRes061.pdf");
+		if (i==5) cR[i]->Print("chargeRes116.pdf)");
+		else cR[i]->Print("chargeRes116.pdf");
 		
 	}
 		

@@ -1,53 +1,30 @@
 //#include "myIncludes.h"
-#include "myClasses.h"
+//#include "myClasses.h"
+#include "HadesCalibIncludes.h"
 
-const TString inRootFile = "./params/allParam_feb24_gen0_16042024.root";
+//const TString inRootFile = "./params/allParam_feb24_gen0_16042024.root";
 //const TString inAsciiFile = "./analysisDST/feb24_dst_params_lineFit.txt";
 //const TString inAsciiFile = "./params/feb24_dst_params_ofMod0_ofMod1_gRpc.txt";
 //const TString inAsciiFile = "RpcCalPar_au_added_26032024_cleaned.txt";
 //const TString inAsciiFile = "RpcCalPar_cc_JanOrlinski_25062024.txt";
-//const TString inAsciiFile = "RpcCalPar_cc_JanOrlinski_25062024.txt";
-	
-//const TString newAsciiFile = "RpcCalPar_auau_JanOrlinski_25062024.txt";
 
-//const TString chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control03.root";
-//const TString timeAndPosOffsetsFile = "";
+const TString inAsciiFile = "./params/RpcCalPar_Oraclefeb24gen1.txt";	
+const TString newAsciiFile = "RpcCalPar_JanOrlinski_04052025.txt";
 
-const Bool_t doCharge = false; 
+const TString chargeOffsetsFile = "ChargeCalib_apr25_raw_116_ALLDAY_afterStartLargeStat.root";
+const TString timeAndPosOffsetsFile = "TimeAndPos_116_afterStartLargeStat.root";
+
+const Bool_t doCharge = true; 
 const Bool_t doTimeAndPos = true; 
 
 const Double_t vProp = 177.0; // propagation velocity for time/pos conversions
 
 void generateAsciiParFile () {
 	
-	TString date="27082024";
-	TString beam="cc";
-	
-	TString inAsciiFile = "";
-	TString newAsciiFile = "";
-	TString chargeOffsetsFile = "";
-	TString timeAndPosOffsetsFile = "";
-	
-	if (beam=="cc") {
-		inAsciiFile = "RpcCalPar_cc_JanOrlinski_25082024.txt";
-		newAsciiFile = "RpcCalPar_cc_JanOrlinski_"+date+".txt";
-		chargeOffsetsFile = "ChargeCalib_feb24_raw_039_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "TimeAndPos_039_Control08.root";
-	}
-	
-	else if (beam=="auau") {
-		inAsciiFile = "RpcCalPar_auau_JanOrlinski_25082024.txt";
-		newAsciiFile = "RpcCalPar_auau_JanOrlinski_"+date+".txt";
-		chargeOffsetsFile = "ChargeCalib_feb24_raw_061_ALLDAY_Control05.root";
-		timeAndPosOffsetsFile = "TimeAndPos_061_Control08.root";
-	}
-
-	Int_t runId = -1; //random runid from feb24 logbook, file be061234303
-	if (beam=="auau") runId = 509332983; //random runid from feb24 logbook, file be061234303
-	else if (beam=="cc") runId = 507428198; //random runid from feb24 logbook, file be24039223638
+	Int_t runId = 509332983; //random runid from feb24 logbook, file be061234303
 	TString asciiParFile = inAsciiFile;
-	TString rootParFile  = inRootFile;
-	TString paramSource  = "ascii,root";
+	TString rootParFile  = "";
+	TString paramSource  = "ascii";
 
 	Hades* myHades       = new Hades;
 	HSpectrometer* spec  = gHades->getSetup();
@@ -69,8 +46,8 @@ void generateAsciiParFile () {
 	  {6,6,5,6},
 	  {6,6,5,6} };
 
-	HDst::setupSpectrometer("feb24", mdcMods, "rich,mdc,tof,rpc,emc,sts,frpc,start,tbox");
-	HDst::setupParameterSources(paramSource, asciiParFile, rootParFile, "FEB24_v0g");
+	HDst::setupSpectrometer("apr25", mdcMods, "rich,mdc,tof,rpc,emc,sts,frpc,start,tbox");
+	HDst::setupParameterSources(paramSource, asciiParFile, rootParFile, "now");
 
 	HParAsciiFileIo* output = new HParAsciiFileIo;
 	output->open(newAsciiFile.Data(), "out");
@@ -79,9 +56,6 @@ void generateAsciiParFile () {
 	
 	HRpcCalPar* pCalPar = (HRpcCalPar*) rtdb->getContainer("RpcCalPar");
 	rtdb->initContainers(runId);
-	
-	cout << "Blip! Beam is " << beam << endl;
-	gSystem->Sleep(2000);
 	
 	TFile* fin;
 	
@@ -135,8 +109,11 @@ void generateAsciiParFile () {
 				Float_t oldTimeOffset   = (*pCalPar)[s][m][c].getLeftTimeOffset();
 				
 				Float_t newXposOffset  = oldXposOffset  + hXposOffsets->GetBinContent(m*32 + c + 1) / vProp;
-				Float_t newTimeOffset  = oldTimeOffset  + hTimeOffsets->GetBinContent(m*32 + c + 1); // bfeore feb24 was -, now set to +
+				Float_t newTimeOffset  = oldTimeOffset  - hTimeOffsets->GetBinContent(m*32 + c + 1); // bfeore feb24 was -, now set to +, 10.03.2025 setting back to - ???
 					     
+				if (abs(newTimeOffset) > 999.0) newTimeOffset = -999.0;
+				if (abs(newXposOffset) > 999.0) newXposOffset = -999.0;
+				
 				(*pCalPar)[s][m][c].setLeftTimeOffset(newTimeOffset);
 				(*pCalPar)[s][m][c].setRightTimeOffset(newXposOffset);
 				

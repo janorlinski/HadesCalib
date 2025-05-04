@@ -78,6 +78,8 @@
 #include "hstart2cal.h"
 //#include "hstart2clusterfinder.h"
 
+#include "JansClusterFinder.h"
+
 #include <iostream>
 #include <fstream>
 
@@ -127,6 +129,125 @@ const Float_t refWidthHi[2] = {widthHiLimit, widthHiLimit};
 
 const Float_t clusteringTimeWindow = 5.0; // ns
 const Float_t clusteringStripWindow = 16; // 16 strips difference
+
+void sayHello () {
+	
+	cout << "\n \n \n" << endl;
+	cout << "  #    #        #   #            #" << endl;
+	cout << "  #    #        #   #            #" << endl;
+	cout << "  #    #       #   #   ####     # " << endl;
+	cout << " ######  ##    #   #  #    #    # " << endl;
+	cout << " #    # #  #  #   #   #    #   #  " << endl;
+	cout << " #    # ###   #   #   #    #   #  " << endl;
+	cout << "#    #  #    # # # # ##   #       " << endl;
+	cout << "#    #   ####   #   #  ###    #   " << endl;
+	cout << "\n \n \n" << endl;
+	gSystem->Sleep(2000);
+}
+
+Double_t timeWalkFuncWithSqrt (Double_t *xarg, Double_t *par) {
+	
+	Double_t x = xarg[0];
+	Double_t result = 0.0;
+	
+	//result = par[0] + par[1]*pow(x, - 0.5);
+	result = par[0] + par[1]*pow(x, - (1./3.));
+	
+	return result;
+	
+}
+
+Double_t timeWalkFuncLinear (Double_t *xarg, Double_t *par) {
+	
+	Double_t x = xarg[0];
+	Double_t result = 0.0;
+	
+	result = par[0] + par[1] * x;
+	
+	return result;
+	
+}
+
+Double_t gaussianWithConstBckg (Double_t *xarg, Double_t *par) {
+	
+	Double_t x = xarg[0];
+	Double_t result = 0.0;
+	Double_t pi = TMath::Pi();
+	
+	result = par[0]/((sqrt(2*pi)*par[2])) * exp (-0.5*(((x-par[1])/par[2])*((x-par[1])/par[2]))) + par[3];
+	
+	return result;
+	
+}
+
+Double_t gaussianWithLinBckg (Double_t *xarg, Double_t *par) {
+	
+	Double_t x = xarg[0];
+	Double_t result = 0.0;
+	Double_t pi = TMath::Pi();
+	
+	result = par[0]/((sqrt(2*pi)*par[2])) * exp (-0.5*(((x-par[1])/par[2])*((x-par[1])/par[2]))) + par[3]*x + par[4];
+	
+	return result;
+	
+}
+
+void fillTimeOffsets (TH1F* hOffsets, TH2F* hSource, Int_t firstBinToFill, Int_t lastBinToFill, TFile* out, TString dirname) {
+	
+	out->cd();
+	out->mkdir(dirname);
+	out->cd(dirname);
+	
+	const Float_t fitRadius = 0.5;
+	
+	for (Int_t i=firstBinToFill; i<=lastBinToFill; i++) { // loop over channels
+	
+		// cout << "Calculating offset for cell with index " << i << endl; 
+		// get appropriate projection
+		
+		TH1F* projection = (TH1F*) hSource->ProjectionY(Form("projection_"+dirname+"_ch%i", i), i, i);
+		Int_t nEntrOfSource = projection->GetEntries();
+		
+		// set fit range
+		
+		Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
+		Double_t heightOfMaximum = projection->GetMaximum();
+		//Double_t positionOfMaximum = 0.0;
+		Double_t fitLoEdge = positionOfMaximum - fitRadius;
+		Double_t fitHiEdge = positionOfMaximum + fitRadius;
+		std::cout << "Gaus will be fitted in range [" << fitLoEdge << ", " << fitHiEdge << "] \n";
+		
+		// fit and fill offset
+		
+		TF1* gausFit = new TF1 (Form("fit_%i", i), gaussianWithConstBckg, fitLoEdge, fitHiEdge, 4);
+		
+		gausFit->SetParameter(0, 1000);
+		//gausFit->SetParLimits(0, 0.1*heightOfMaximum, 1000000.0);
+		
+		gausFit->SetParameter(1, 0.0);
+		gausFit->SetParLimits(1, fitLoEdge + 0.25*fitRadius, fitHiEdge-0.25*fitRadius);
+		
+		gausFit->SetParameter(2, 1.0);
+		gausFit->SetParLimits(2, 0.0, 0.5*fitRadius);
+		
+		
+		gausFit->FixParameter(3, 0.0);
+		//gausFit->SetParameter(3, 0.0);
+		//gausFit->SetParLimits(3, 0.0, 0.05*heightOfMaximum);
+		
+		
+		gausFit->SetRange(fitLoEdge, fitHiEdge);
+		projection->Fit(gausFit, "WR");
+		
+		Double_t center = gausFit->GetParameter(1);
+		if (nEntrOfSource>11000) hOffsets->SetBinContent(i, center);
+		else hOffsets->SetBinContent(i, 0.0);
+		
+		projection->Write();
+		
+
+	}
+}
 
 void fillOffsets (TH1F* hOffsets, TH2F* hCharge, Int_t nCells) {
 	
@@ -292,19 +413,26 @@ void fillPosOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F*
 		
 		// set fit range
 		
-		Double_t positionOfMaximum = 0.0; // ugly hardcoded part - look for pions!!!
-		//Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
+		//Double_t positionOfMaximum = 0.0; // ugly hardcoded part - look for pions!!!
+		Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
+		Double_t max = projection->GetBinContent(projection->GetMaximumBin());
 		Double_t fitLoEdge = positionOfMaximum - fitRadius;
 		Double_t fitHiEdge = positionOfMaximum + fitRadius;
 		//std::cout << "Gaus will be fitted in range [" << fitLoEdge << ", " << fitHiEdge << "] \n";
 		
 		// fit and fill offset
 		
-		TF1* gausFit = new TF1 (Form("fit_%i", i), "gausn", fitLoEdge, fitHiEdge);
+		TF1* gausFit = new TF1 (Form("fit_%i", i), gaussianWithConstBckg, fitLoEdge, fitHiEdge, 4);
+		
+		gausFit->SetParameter(0, 0.5*max);
+		gausFit->SetParameter(1, positionOfMaximum);
+		gausFit->SetParameter(2, 10.0);
+		gausFit->SetParameter(3, 0.1*max);
+		
 		gausFit->SetParLimits(1, positionOfMaximum - 0.5*fitRadius, positionOfMaximum + 0.5*fitRadius);
-		gausFit->SetParLimits(2, 0.1, 0.3); //sigma must be rather narrow, to not fit in the bckground region
+		//gausFit->SetParLimits(2, 0.1, 0.3); //sigma must be rather narrow, to not fit in the bckground region
 		gausFit->SetRange(fitLoEdge, fitHiEdge);
-		projection->Fit(gausFit, "RQ");
+		projection->Fit(gausFit, "WRQ");
 		
 		Double_t center = gausFit->GetParameter(1);
 		Double_t sigma = gausFit->GetParameter(2);
@@ -407,110 +535,137 @@ void fillTimeOffsets (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F
 	}
 }
 
-void sayHello () {
+void fillTimeOffsetsAdvanced (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F* hSource, Double_t fitRadius, TFile* out, TString dirname) {
 	
-	cout << "\n \n \n" << endl;
-	cout << "  #    #        #   #            #" << endl;
-	cout << "  #    #        #   #            #" << endl;
-	cout << "  #    #       #   #   ####     # " << endl;
-	cout << " ######  ##    #   #  #    #    # " << endl;
-	cout << " #    # #  #  #   #   #    #   #  " << endl;
-	cout << " #    # ###   #   #   #    #   #  " << endl;
-	cout << "#    #  #    # # # # ##   #       " << endl;
-	cout << "#    #   ####   #   #  ###    #   " << endl;
-	cout << "\n \n \n" << endl;
-	gSystem->Sleep(2000);
-}
-
-Double_t timeWalkFuncWithSqrt (Double_t *xarg, Double_t *par) {
-	
-	Double_t x = xarg[0];
-	Double_t result = 0.0;
-	
-	//result = par[0] + par[1]*pow(x, - 0.5);
-	result = par[0] + par[1]*pow(x, - (1./3.));
-	
-	return result;
-	
-}
-
-Double_t timeWalkFuncLinear (Double_t *xarg, Double_t *par) {
-	
-	Double_t x = xarg[0];
-	Double_t result = 0.0;
-	
-	result = par[0] + par[1] * x;
-	
-	return result;
-	
-}
-
-Double_t gaussianWithConstBckg (Double_t *xarg, Double_t *par) {
-	
-	Double_t x = xarg[0];
-	Double_t result = 0.0;
-	Double_t pi = TMath::Pi();
-	
-	result = par[0]*exp(-0.5*(((x-par[1])/par[2])*(x-par[1])/par[2])/(sqrt(2*pi)*par[2])) + par[3];
-	
-	return result;
-	
-}
-
-void fillTimeOffsets (TH1F* hOffsets, TH2F* hSource, Int_t firstBinToFill, Int_t lastBinToFill, TFile* out, TString dirname) {
+	Double_t originalFitRadius = fitRadius;
 	
 	out->cd();
 	out->mkdir(dirname);
 	out->cd(dirname);
 	
-	const Float_t fitRadius = 0.5;
+	const Int_t nCells = 192;
 	
-	for (Int_t i=firstBinToFill; i<=lastBinToFill; i++) { // loop over channels
+	for (Int_t i=0; i<nCells; i++) { // loop over cells
 	
 		// cout << "Calculating offset for cell with index " << i << endl; 
+	
 		// get appropriate projection
 		
-		TH1F* projection = (TH1F*) hSource->ProjectionY(Form("projection_"+dirname+"_ch%i", i), i, i);
-		Int_t nEntrOfSource = projection->GetEntries();
+		TH1F* projection = (TH1F*) hSource->ProjectionY(Form("projection_%i", i+1), i+1, i+1);
+		Int_t nBinsOfSource = projection->GetNbinsX();
 		
-		// set fit range
+		Double_t positionOfMaximum = 0.0; 
+		Double_t maxContent = 0.0;
+		fitRadius = originalFitRadius;
 		
-		Double_t positionOfMaximum = projection->GetBinCenter(projection->GetMaximumBin());
-		Double_t heightOfMaximum = projection->GetMaximum();
-		//Double_t positionOfMaximum = 0.0;
+		for (Int_t bin=1; bin<=nBinsOfSource; bin++) {
+			
+			Double_t currentPosition = projection->GetBinCenter(bin);
+			Double_t currentContent = projection->GetBinContent(bin);
+			
+			if (currentContent >=  maxContent) { // standard max searching scan
+				maxContent = currentContent;
+				positionOfMaximum = currentPosition;
+			}
+			
+			else if (currentContent/maxContent < 0.75 && 
+					currentContent > 20.0 && 
+					maxContent-currentContent > 50 &&
+					maxContent>0.15*projection->GetMaximum() && 
+					currentPosition-positionOfMaximum>0.05) break;
+			
+			else continue;
+			
+			
+			if (bin==nBinsOfSource) { // if the break failed, return to some safe conditions
+				cout << "No matching maximum found! Setting radius to -2 : 2" << endl;
+				positionOfMaximum=0.0;
+				fitRadius=2.0;
+			}
+			
+		}
+		
 		Double_t fitLoEdge = positionOfMaximum - fitRadius;
 		Double_t fitHiEdge = positionOfMaximum + fitRadius;
 		std::cout << "Gaus will be fitted in range [" << fitLoEdge << ", " << fitHiEdge << "] \n";
 		
 		// fit and fill offset
 		
-		TF1* gausFit = new TF1 (Form("fit_%i", i), gaussianWithConstBckg, fitLoEdge, fitHiEdge, 4);
+		TF1* gausFit = new TF1 (Form("fit_%i", i), gaussianWithLinBckg, fitLoEdge, fitHiEdge, 5);
 		
-		gausFit->SetParameter(0, 1000);
-		//gausFit->SetParLimits(0, 0.1*heightOfMaximum, 1000000.0);
+		gausFit->SetParameter(0, maxContent);
+		gausFit->SetParameter(1, positionOfMaximum);
+		gausFit->SetParameter(2, 0.120);
+		gausFit->SetParameter(3, 1.0);
+		gausFit->SetParameter(4, 0.05*maxContent);
 		
-		gausFit->SetParameter(1, 0.0);
-		gausFit->SetParLimits(1, fitLoEdge + 0.25*fitRadius, fitHiEdge-0.25*fitRadius);
-		
-		gausFit->SetParameter(2, 1.0);
-		gausFit->SetParLimits(2, 0.0, 0.5*fitRadius);
-		
-		
-		gausFit->FixParameter(3, 0.0);
-		//gausFit->SetParameter(3, 0.0);
-		//gausFit->SetParLimits(3, 0.0, 0.05*heightOfMaximum);
-		
+		gausFit->SetParLimits(0, 20, 200000000);
+		gausFit->SetParLimits(1, fitLoEdge, fitHiEdge);
+		gausFit->SetParLimits(2, 0.08, 0.18); //sigma must be rather narrow, to not fit in the bckground region
+		gausFit->SetParLimits(3, 0.00001, 1000); 
+		gausFit->SetParLimits(4, -1.0*maxContent, 1.0*maxContent);
 		
 		gausFit->SetRange(fitLoEdge, fitHiEdge);
-		projection->Fit(gausFit, "WR");
+		
+		projection->Fit(gausFit, "RQ"); // all weights = 1 option on this time
 		
 		Double_t center = gausFit->GetParameter(1);
-		if (nEntrOfSource>11000) hOffsets->SetBinContent(i, center);
-		else hOffsets->SetBinContent(i, 0.0);
+		Double_t sigma = gausFit->GetParameter(2);
+		Double_t ndf = gausFit->GetNDF();
+		Double_t chi = 0.0;
+		if (ndf != 0.0) Double_t chi = gausFit->GetChisquare() / ndf;
 		
+		hOffsets->SetBinContent(i+1, center);
+		hFitSigma->SetBinContent(i+1, sigma);
+		hFitChiSquare->SetBinContent(i+1, chi);
 		projection->Write();
 		
+	}
+}
 
+void fillTimeOffsetsDetailed (TH1F* hOffsets, TH1F* hFitSigma, TH1F* hFitChiSquare, TH2F* hSource, TFile* out, TString dirname) {
+	
+	out->cd();
+	out->mkdir(dirname);
+	out->cd(dirname);
+	
+	const Int_t nCells = 192;
+	
+	for (Int_t i=0; i<nCells; i++) { // loop over cells
+		
+		TH1F* projection = (TH1F*) hSource->ProjectionY(Form("projection_%i", i+1), i+1, i+1);
+		Int_t nBinsOfSource = projection->GetNbinsX();
+		Double_t maxContent = projection->GetBinContent(projection->GetMaximumBin());
+		
+		TF1* gausFit = new TF1 (Form("fit_%i", i), gaussianWithLinBckg, -1.0, 1.0, 5);
+		
+		gausFit->SetParameter(0, maxContent);
+		gausFit->SetParameter(1, 0);
+		gausFit->SetParameter(2, 0.120);
+		gausFit->SetParameter(3, 1.0);
+		gausFit->SetParameter(4, 0.05*maxContent);
+		
+		gausFit->SetParLimits(0, 20, 200000000);
+		gausFit->SetParLimits(1, -0.3, 0.3);
+		gausFit->SetParLimits(2, 0.08, 0.18); //sigma must be rather narrow, to not fit in the bckground region
+		gausFit->SetParLimits(3, 0.00001, 1000); 
+		gausFit->SetParLimits(4, -1.0*maxContent, 1.0*maxContent);
+		
+		gausFit->SetRange(-0.55, 0.55);
+		
+		projection->Fit(gausFit, "RQ"); // all weights = 1 option on this time
+		
+		Double_t center = gausFit->GetParameter(1);
+		Double_t sigma = gausFit->GetParameter(2);
+		Double_t ndf = gausFit->GetNDF();
+		Double_t chi = 0.0;
+		if (ndf != 0.0) Double_t chi = gausFit->GetChisquare() / ndf;
+		
+		hOffsets->SetBinContent(i+1, center);
+		hFitSigma->SetBinContent(i+1, sigma);
+		hFitChiSquare->SetBinContent(i+1, chi);
+		projection->Write();
+		
 	}
 }
 
@@ -824,6 +979,32 @@ Bool_t skipThisChannel (Int_t channel) {
 	return result;
 }
 
+void normalizeBinsX (TH2F* hist) {
+	
+	Int_t rebinParam = 5;
+	hist->RebinY(rebinParam);
+	
+	Int_t nXbins = hist->GetNbinsX();
+	Int_t nYbins = hist->GetNbinsY();
+	
+	for (Int_t i=1; i<=nXbins; i++) {
+		
+		TH1F* projection = (TH1F*) hist->ProjectionY(Form("projection_%i", i), i, i);
+		Double_t maximum = projection->GetMaximum();
+		
+		Double_t normConst = 1.0;
+		if (maximum > 0) normConst = normConst / maximum;;
+		
+		for (Int_t j=1; j<=nYbins; j++) {
+			Double_t currentContent = hist->GetBinContent(i, j);
+			hist->SetBinContent(i, j, currentContent*normConst);
+		}
+	}
+	
+}
+
+/*
+
 Bool_t checkVectorDiffs (vector<Float_t> vec, Float_t test, Float_t window) {
 	
 	Bool_t result = false;
@@ -977,5 +1158,7 @@ class JansClusterFinder {
 		Float_t getClusterTot (Int_t i) {if (clusterModules.size()>0) return clusterTots[i]; else return -9999.0;}
 		
 };
+* 
+*/
 
 #endif

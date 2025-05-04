@@ -4,21 +4,22 @@
 void generateAsciiStartParFile () {
 	
 	const TString inRootFile = "./params/allParam_feb24_gen1_22042025.root";
-	const TString inAsciiFile = "./params/apr25_dst_params.txt";
+	const TString inAsciiFile = "Start2CalPar_JanOrlinski_03052025.txt";
 		
-	const TString newAsciiFile = "Start2CalPar_JanOrlinski_03052025.txt";
+	const TString newAsciiFile = "Start2CalPar_JanOrlinski_04052025.txt";
 	
 	const TString startOffsetsFile = "";
 
 	Int_t nModulesForOffsets = 4;
-	Double_t globalStartOffset = 0.0;
-	Double_t globalVetoOffset = -0.19;
+	Double_t globalStartOffset = +0.16;
+	Double_t globalVetoOffset = 0.0;
 
-	Int_t runId = 546276917; // random runid from apr25
+	//Int_t runId = 546276917; // random runid from apr25
+	Int_t runId = 509556277; // last runid from feb24
 	//Int_t runId = 507316668; // copied from analysisDST
 	TString asciiParFile = inAsciiFile;
 	TString rootParFile  = inRootFile;
-	TString paramSource  = "ascii,root";
+	TString paramSource  = "ascii";
 
 	Hades* myHades       = new Hades;
 	HSpectrometer* spec  = gHades->getSetup();
@@ -68,37 +69,15 @@ void generateAsciiStartParFile () {
 			
 			Float_t adjustment = 0.0;
 			
-			if (m==0 && c+1==4) adjustment = -0.78;
-			else if (m==0 && c+1==5) adjustment = -0.04;
-			else if (m==0 && c+1==6) adjustment = -0.89;
-			else if (m==0 && c+1==7) adjustment = +0.07;
-			else if (m==0 && c+1==8) adjustment = -0.20;
-			else if (m==0 && c+1==9) adjustment = +0.19;
-			else if (m==0 && c+1==10) adjustment = -0.19;
-			else if (m==0 && c+1==11) adjustment = +0.11;
-			else if (m==0 && c+1==12) adjustment = +0.07;
-			else if (m==0 && c+1==14) adjustment = -0.93;
-			
-			else if (m==1 && c+1==3) adjustment = +0.20;
-			else if (m==1 && c+1==4) adjustment = +0.09;
-			else if (m==1 && c+1==5) adjustment = +0.08;
-			else if (m==1 && c+1==6) adjustment = -0.07;
-			else if (m==1 && c+1==7) adjustment = +0.08;
-			else if (m==1 && c+1==8) adjustment = -0.02;
-			else if (m==1 && c+1==9) adjustment = +0.08;
-			else if (m==1 && c+1==10) adjustment = 0.00;
-			else if (m==1 && c+1==11) adjustment = +0.11;
-			else if (m==1 && c+1==12) adjustment = +1.67;
-			else if (m==1 && c+1==13) adjustment = +0.18;
-			else if (m==1 && c+1==14) adjustment = +4.08;
-			
-			else if (m==3 && c+1==1) adjustment = +0.18;
-			else if (m==3 && c+1==2) adjustment = +0.18;
-			else if (m==3 && c+1==3) adjustment = +0.12;
-			else if (m==3 && c+1==4) adjustment = +0.18;
-			else if (m==3 && c+1==6) adjustment = +0.02;
-			else if (m==3 && c+1==7) adjustment = -0.04;
-			else if (m==3 && c+1==8) adjustment = -0.57;
+			if (m==0 && c+1==2) adjustment = +1.15-0.16;
+			if (m==0 && c+1==3) adjustment = -5.81-0.16;
+			if (m==0 && c+1==4) adjustment = +0.47-0.16;
+			if (m==0 && c+1==6) adjustment = +0.81-0.16;
+			if (m==0 && c+1==13) adjustment = +0.28-0.16;
+			if (m==0 && c+1==14) adjustment = +0.46-0.16;
+			if (m==1 && c+1==1) adjustment = +3.6-0.16;
+			if (m==1 && c+1==2) adjustment = +1.27-0.16;
+			if (m==1 && c+1==16) adjustment = +6.21-0.16;
 			
 			if (adjustment > 1000 || adjustment < -1000) adjustment = 0.0;
 			
@@ -114,6 +93,6 @@ void generateAsciiStartParFile () {
 	}
 	cout << "blip" << endl;
 	//fin->Close();
-	output->close();
+	//output->close();
 	delete gHades;
 }
